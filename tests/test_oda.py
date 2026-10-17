@@ -65,3 +65,31 @@ def test_bolge_eslesmeleri():
     ciftler = bolge_eslesmeleri(etiket, [kare, uzak])
     assert [(e, j) for e, j, _ in ciftler] == [(1, 0)]
     assert ciftler[0][2] > 0.9
+
+
+def test_genis_bosluk_yalniz_ayni_dogrultuda():
+    from floorplan_parser.aciklik import genis_bosluklar
+    from floorplan_parser.duvar import Parca
+
+    def p(x1, y1, x2, y2):
+        return Parca(x1, y1, x2, y2, 10.0, (x1, y1, x2, y2))
+
+    # Aynı doğruda 300 px açıklık (garaj kapısı gibi) ve karşı duvara dik
+    # 300 px boşluk (odanın karşısı): yalnız ilki.
+    sol, sag = p(20, 100, 200, 100), p(500, 100, 780, 100)
+    dik_uc, karsi = p(100, 300, 100, 380), p(20, 690, 780, 690)
+    parcalar = [sol, sag, dik_uc, karsi]
+    duvar = parca_maskesi(parcalar, (800, 800))
+    g = genis_bosluklar(parcalar, duvar)
+    assert len(g) == 1
+    assert abs(g[0].genislik - 300) <= 3
+
+
+def test_plani_coz_sentetik():
+    from floorplan_parser.akis import plani_coz
+
+    plan = plan_ciz(duvar=24, ic_duvar=8, kapi_genislik=90)
+    s = plani_coz(plan.goruntu)
+    assert len(s.kapilar) == 1 and len(s.pencereler) == 1
+    assert sorted(n for n in s.graf.nodes if n != DIS) == [1, 2]
+    assert [(u, v) for u, v in s.graf.edges()] == [(1, 2)]

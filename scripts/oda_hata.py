@@ -11,7 +11,8 @@ Eşleşmeyen her cevap odası için, içinde en çok piksel kaplayan bulunan bö
 - kismi: bölge tek odaya ait ama IoU < 0.5
 
 "Kaplıyor": bölgenin o odayla kesişimi odanın %30'undan fazla.
-Kullanım: uv run python scripts/oda_hata.py [--ayak-izi 151]
+Kullanım: uv run python scripts/oda_hata.py [--varyant duvar:yok:0:151:0]
+(varyant biçimi oda_deney.py ile aynı; INCE yok sayılır)
 """
 
 import argparse
@@ -23,7 +24,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from floorplan_parser.aciklik import aciklik_bul
+from floorplan_parser.aciklik import aciklik_bul, bosluklar, genis_bosluklar, kose_bosluklari
 from floorplan_parser.cvcfp import maske, ornekler, yukle
 from floorplan_parser.degerlendirme import bolge_eslesmeleri, parca_maskesi
 from floorplan_parser.duvar import iki_olcekli_duvarlar
@@ -35,9 +36,10 @@ SONUC = Path(__file__).resolve().parents[1] / "results"
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--ayak-izi", type=int, default=VARSAYILAN_ODA_KURAL.ayak_izi_cekirdek)
+    ap.add_argument("--varyant", default="duvar:yok:0:151:0")
     a = ap.parse_args()
-    kural = replace(VARSAYILAN_ODA_KURAL, ayak_izi_cekirdek=a.ayak_izi)
+    ayak_k, oda_k, _, cek, pay = a.varyant.split(":")
+    kural = replace(VARSAYILAN_ODA_KURAL, ayak_izi_cekirdek=int(cek), min_duvar_payi=float(pay))
     satirlar = []
     for o in ornekler(bolum="gelistirme"):
         if o.grup != "I-II":
@@ -49,8 +51,25 @@ def main() -> None:
         ikili = delik_doldur(ham, 4)
         kalin, kalin_p, ince_p = iki_olcekli_duvarlar(ikili)
         duvar = np.maximum(kalin, parca_maskesi(ince_p, g.shape))
-        kapilar, pencereler, _ = aciklik_bul(ikili, kalin_p + ince_p, duvar)
-        _, etiket = oda_grafi(duvar, kapilar, pencereler, kural)
+        parcalar = kalin_p + ince_p
+        kapilar, pencereler, _ = aciklik_bul(ikili, parcalar, duvar)
+        parca_b = bosluklar(parcalar, duvar)
+        secenek = {
+            "yok": [],
+            "parca": parca_b,
+            "hepsi": parca_b + kose_bosluklari(duvar),
+            "genis": genis_bosluklar(parcalar, duvar),
+        }
+        secenek["pg"] = secenek["parca"] + secenek["genis"]
+        secenek["hg"] = secenek["hepsi"] + secenek["genis"]
+        _, etiket = oda_grafi(
+            duvar,
+            kapilar,
+            pencereler,
+            kural,
+            bosluklar=secenek[oda_k],
+            ayak_bosluklari=None if ayak_k == "duvar" else secenek[ayak_k],
+        )
 
         odalar = c.sinif("Room")
         eslesen = {j for _, j, _ in bolge_eslesmeleri(etiket, [n.noktalar for n in odalar])}

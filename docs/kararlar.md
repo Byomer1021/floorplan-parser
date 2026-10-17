@@ -176,7 +176,7 @@ daraltıyor.
 porte-fenêtre ve kanatlı pencere cevapta Window, sistemde yarıçapa göre
 ayrılıyor; yarı açık çizilmiş kapıların çoğu kaçıyor.
 
-## K-009: Oda grafı: kirişle kapat + ayak izi + bağlı bileşen, öneri (2026-10-17)
+## K-009: Oda grafı: kirişle kapat + ayak izi + bağlı bileşen, geçerli (2026-10-17)
 
 `oda.oda_grafi`: kapı ve pencere boşlukları kirişle kapatılır; bina dışı,
 duvar maskesinin 151 px kareyle kapanmışının delikleri dolu hali (ayak izi)
@@ -197,3 +197,17 @@ Geliştirmede oda F1 0.534 (K 0.769, D 0.409), kenar F1 0.236
 yok.
 
 **Denenip bırakılan:** bütün boşluk adaylarını kapatmak (576 fazla oda).
+
+**2026-10-17, ikinci tur** ([olcumler §10](olcumler.md)): oda bölmede
+kapı/pencereye ek olarak parça uçlarından bulunan bütün boşluklar ve aynı
+doğrultudaki 150-450 px geniş açıklıklar kapatılır; ayak izi geniş
+açıklıklar kapanmış duvardan, 301 px çekirdekle; ayak izi içinde çevresinin
+%80'inden azı duvar/kiriş olan bölge dış. Geliştirmede oda F1 0.534 →
+0.626, kenar F1 0.236 → 0.260. Uçtan uca: `akis.plani_coz`.
+
+Denenip bırakılan (ikinci tur): ince sınır çizgileri (oda F1 0.427, mobilya
+ve dolap çizgileri odaları bölüyor); köşe boşluklarını oda bölmede kapatmak
+(583 fazla oda).
+
+Kalan: kapısı kapanmayan birleşmeler (99 oda), kapı bulunamayan kenarlar
+(105). Duvarsız ayrımlar (91 oda) bu yöntemle bulunamaz.

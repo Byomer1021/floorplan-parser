@@ -181,6 +181,55 @@ def bosluklar(
     return bulunan
 
 
+def genis_bosluklar(
+    parcalar: list[Parca],
+    duvar_maske: np.ndarray,
+    min_genislik: float = 150.0,
+    max_genislik: float = 450.0,
+) -> list[Bosluk]:
+    """Kapı boyundan geniş açıklıklar (garaj kapısı, porte-fenêtre): yalnız
+    karşıdaki duvar aynı doğrultuda sürüyorsa. Işın odanın karşı duvarına
+    çarpmasın diye karşı duvar bu parçayla ≤ 10° ve orta çizgisi ≤ yarım
+    kalınlık + 4 px uzakta olmalı. Oda bölme ve bina sınırı için."""
+    kural = AciklikKural(min_genislik=min_genislik, max_genislik=max_genislik)
+    etiket = duvar_etiketi(parcalar, duvar_maske)
+    h, w = duvar_maske.shape
+    en_kalin = max((p.kalinlik for p in parcalar), default=0.0)
+    bulunan: list[Bosluk] = []
+    for i, p in enumerate(parcalar):
+        k = np.array(p.kapsam or (p.x1, p.y1, p.x2, p.y2))
+        a, b = k[:2], k[2:]
+        d = (b - a) / max(np.linalg.norm(b - a), 1e-9)
+        n = np.array([-d[1], d[0]])
+        graf = (np.array([p.x1, p.y1]), np.array([p.x2, p.y2]))
+        for uc, yon, g_uc in ((a, -d, graf[0]), (b, d, graf[1])):
+            kavsak = np.linalg.norm(g_uc - uc) > 1.0
+            r = bosluk_isini(duvar_maske, uc, yon, kural, en_kalin + 4 if kavsak else 4)
+            if r is None:
+                continue
+            ga, gb = uc + r[0] * yon, uc + r[1] * yon
+            xi = min(max(int(np.floor(gb[0] + 0.5 + yon[0])), 0), w - 1)
+            yi = min(max(int(np.floor(gb[1] + 0.5 + yon[1])), 0), h - 1)
+            e = etiket[yi, xi]
+            if e <= 0 or e == i + 1:
+                continue
+            q = parcalar[e - 1]
+            if aci_farki(q.aci, p.aci) > math.radians(10):
+                continue
+            q_orta = (np.array([q.x1, q.y1]) + np.array([q.x2, q.y2])) / 2
+            if abs((q_orta - a) @ n) > max(p.kalinlik, q.kalinlik) / 2 + 4:
+                continue
+            yeni = Bosluk(tuple(map(float, ga)), tuple(map(float, gb)), p.kalinlik)
+            orta = (ga + gb) / 2
+            if any(
+                np.linalg.norm(orta - (np.array(s.a) + np.array(s.b)) / 2) < 0.25 * s.genislik
+                for s in bulunan
+            ):
+                continue
+            bulunan.append(yeni)
+    return bulunan
+
+
 def ince_murekkep(ikili: np.ndarray, duvar_maske: np.ndarray, tol: float) -> np.ndarray:
     """Duvarlar (2 px genişletilmiş) çıkarılmış mürekkebin ``tol`` kadar
     genişletilmişi: yay örneği bunun içindeyse mürekkebe yakın."""

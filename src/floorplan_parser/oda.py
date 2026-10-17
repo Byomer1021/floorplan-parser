@@ -25,6 +25,7 @@ import networkx as nx
 import numpy as np
 
 from floorplan_parser.aciklik import Bosluk, Kapi, Pencere
+from floorplan_parser.duvar import duvarlari_bul
 
 DIS = -1  # graf düğümü: bina dışı
 
@@ -34,7 +35,11 @@ class OdaKural:
     min_alan: int = 5000  # px; CVC-FP I-II cevabında oda alanı %1'lik dilim 13 391
     kiris_kalinlik: int = 5
     yan_uzaklik: tuple[int, ...] = (8, 16, 24, 32, 40)
-    ayak_izi_cekirdek: int = 151  # px, 0 = kapalı
+    # Ayak izi kapama çekirdeği (px, 0 = kapalı); geliştirmede 301-601 plato (§10).
+    ayak_izi_cekirdek: int = 301
+    # Ayak izi içindeki bölgenin çevresinde duvar/kiriş payı bunun altındaysa
+    # dış sayılır (büyük çekirdeğin içeri aldığı sundurma, teras). 0 = kapalı.
+    min_duvar_payi: float = 0.8
 
 
 VARSAYILAN_ODA_KURAL = OdaKural()
@@ -78,6 +83,37 @@ def kapali_maske(
     return m
 
 
+def ince_sinirlar(
+    ikili: np.ndarray,
+    duvar_maske: np.ndarray,
+    min_uzunluk: int = 80,
+    max_kalinlik: float = 6.0,
+    uc_tol: float = 6.0,
+) -> np.ndarray:
+    """Yalnız oda bölme için sınır çizgileri (255): duvar olmayan mürekkepte,
+    ince, uzun, düz ve iki ucu da duvara değen parçalar. İnce çizgiyle
+    çizilmiş bölme duvarları yakalamak için; duvar sayılmaz."""
+    genis = cv2.dilate(duvar_maske, np.ones((5, 5), np.uint8))
+    aday = cv2.bitwise_and(ikili, cv2.bitwise_not(genis))
+    uzak = cv2.distanceTransform((duvar_maske == 0).astype(np.uint8), cv2.DIST_L2, 3)
+    h, w = duvar_maske.shape
+    m = np.zeros_like(duvar_maske)
+    for p in duvarlari_bul(aday, max_bosluk=10, min_uzunluk=min_uzunluk):
+        if p.kalinlik > max_kalinlik:
+            continue
+        k = np.array(p.kapsam or (p.x1, p.y1, p.x2, p.y2))
+        a, b = k[:2], k[2:]
+        d = (b - a) / max(np.linalg.norm(b - a), 1e-9)
+        a, b = a - (uc_tol + 2) * d, b + (uc_tol + 2) * d
+        degiyor = all(
+            uzak[min(max(round(q[1]), 0), h - 1), min(max(round(q[0]), 0), w - 1)] <= 1
+            for q in (a, b)
+        )
+        if degiyor:
+            cv2.line(m, tuple(map(round, a)), tuple(map(round, b)), 255, 3)
+    return m
+
+
 def ayak_izi(duvar_maske: np.ndarray, cekirdek: int) -> np.ndarray:
     """Duvar maskesinin ``cekirdek`` karesiyle kapanmışı, delikleri dolu (255)."""
     # Kenar payı: OpenCV kapamada erozyon resmin dışını dolu sayar; duvar kenara
@@ -109,6 +145,18 @@ def odalar(
         dis = (x == 0) | (y == 0) | (x + gen == w) | (y + yuk == h)
     else:
         dis = np.zeros(n, bool)
+        if kural.min_duvar_payi > 0:
+            # Bileşenin dış sınırındaki pikseller: duvar/kirişe mi, ayak izinin
+            # dışına mı komşu. Payı düşük bölge içbükey dış alandır.
+            k3 = np.ones((3, 3), np.uint8)
+            disari = ((ayak == 0) & (kapali == 0)).astype(np.uint8)
+            duvara = cv2.dilate((kapali > 0).astype(np.uint8), k3) & bos
+            disa = cv2.dilate(disari, k3) & bos
+            n_duvar = np.bincount(etiket[duvara > 0], minlength=n)
+            n_dis = np.bincount(etiket[disa > 0], minlength=n)
+            pay = n_duvar / np.maximum(n_duvar + n_dis, 1)
+            dis = (n_dis > 0) & (pay < kural.min_duvar_payi)
+            dis[0] = False
     yeni = np.zeros(n, np.int32)
     liste: list[Oda] = []
     for i in range(1, n):
@@ -158,12 +206,29 @@ def oda_grafi(
     pencereler: list[Pencere],
     kural: OdaKural = VARSAYILAN_ODA_KURAL,
     bosluklar: Sequence[Bosluk] = (),
+    ayak_bosluklari: Sequence[Bosluk] | None = None,
+    sinir_maske: np.ndarray | None = None,
 ) -> tuple[nx.MultiGraph, np.ndarray]:
     """Düğümler: odalar (``alan``, ``merkez``) ve dış (``DIS``); kenarlar:
     kapılar (``kapi`` = kapı sırası). Etiket görüntüsü de döner.
-    ``bosluklar``: kapı/pencere olmayan, yine de kapatılacak boşluk adayları."""
+
+    - ``bosluklar``: kapı/pencere olmayan, oda bölmede yine de kapatılacak
+      boşluk adayları.
+    - ``ayak_bosluklari``: verilirse ayak izi, duvar maskesinden değil bu
+      boşluklar ve kapı/pencere kirişleriyle kapanmış maskeden çıkarılır
+      (dış duvardaki açıklıklar sınırı delmesin; oda bölmeyi etkilemez).
+    - ``sinir_maske``: yalnız oda bölmede sınır sayılan ek çizgiler (ör. ince
+      çizgili bölme duvarlar); duvar sayılmaz.
+    """
     kapali = kapali_maske(duvar_maske, kapilar, pencereler, kural, bosluklar)
-    ayak = ayak_izi(duvar_maske, kural.ayak_izi_cekirdek) if kural.ayak_izi_cekirdek else None
+    if sinir_maske is not None:
+        kapali = np.maximum(kapali, sinir_maske)
+    ayak = None
+    if kural.ayak_izi_cekirdek:
+        kaynak = duvar_maske
+        if ayak_bosluklari is not None:
+            kaynak = kapali_maske(duvar_maske, kapilar, pencereler, kural, ayak_bosluklari)
+        ayak = ayak_izi(kaynak, kural.ayak_izi_cekirdek)
     etiket, liste = odalar(kapali, kural, ayak)
     g = nx.MultiGraph()
     for o in liste:

@@ -84,6 +84,7 @@ def plan_ciz(
     ic_duvar: int | None = None,
     merdiven: bool = False,
     serbest_cizgi: bool = False,
+    kapi_genislik: int = 60,
 ) -> SentetikPlan:
     """600x400 plan. ``gurultu``: her pikselin rastgele ters çevrilme olasılığı.
 
@@ -95,7 +96,7 @@ def plan_ciz(
     """
     h = duvar // 2
     ic = ic_duvar or duvar
-    kapi = Kapi(mentese=(300, 180), genislik=60)
+    kapi = Kapi(mentese=(300, 180), genislik=kapi_genislik)
     pencere = Pencere(x1=100, x2=200, y=350)
     mx, my = kapi.mentese
     r = kapi.genislik

@@ -387,3 +387,68 @@ Görüntüyle bakılan 3 planda (IIa_BK0701, IIa_AP3401, Ib_RI0501):
   alanları içeri alıyor (tablo: doğru oda artıyor, fazla daha çok artıyor).
 - Bazı bölme duvarlar 2-3 px çizgiyle çizilmiş (Ib_RI0501: HALL, CUISINE,
   SEJOUR arası); ince duvar adımı 7 px'ten inceyi atıyor, odalar birleşiyor.
+
+## §10 Oda grafı, ikinci tur (2026-10-17)
+
+Aynı 62 plan, aynı eşleme (§9). `scripts/oda_deney.py --varyant`, tek
+geçişte birden çok oda varyantı; `scripts/oda_hata.py`,
+`scripts/kenar_hata.py` hata dökümü.
+
+**Kenar kaybı nereden** (§9 ayarı, `kenar_hata.py`): cevaptaki 434 kapı
+kenarının 255'inde iki odadan biri bulunamamış, 105'inde kapı bulunamamış,
+74'ü doğru; kapı ve iki oda bulunduğunda yanlış bağlanan 0. Kenar, oda
+duyarlılığına bağlı: iki odanın ikisi de bulunmalı.
+
+**"Dış" sayılan odalar:** çevrelerinin medyan %68'i duvar/kirişte (bulunan
+odalarda %92), ayak izi içinde kalan payları medyan 0. Neden (IIa_BA0710,
+görüntüyle): dış duvarda tek bir çok geniş açıklık (garaj kapısı, 250+ px)
+151 px kapamayla köprülenmiyor, dışarıdan doldurma içeri girip bütün evi dış
+yapıyor. Ayak izi 414 bin px, yalnız duvarlar 264 bin px.
+
+| varyant | oda D/F/E | oda K / D / F1 | kenar D/F/E | kenar F1 |
+|---|---|---|---|---|
+| §9 seçilen (çekirdek 151) | 246/74/356 | 0.769 / 0.409 / 0.534 | 74/119/360 | 0.236 |
+| ayak izi parça boşluklarıyla kapanmış duvardan | 241/75/361 | 0.763 / 0.400 / 0.525 | 72/134/362 | 0.225 |
+| ayak izi bütün boşluklar kapanmış duvardan, oda bölmede parça boşlukları | 282/185/320 | 0.604 / 0.468 / 0.528 | 75/161/359 | 0.224 |
+| ayak izi bütün boşluklardan + ince sınır çizgileri (iki ucu duvara değen) | 249/314/353 | 0.442 / 0.414 / 0.427 | 67/159/367 | 0.203 |
+| çekirdek 301 + duvar payı ≥ 0.6 | 263/69/339 | 0.792 / 0.437 / 0.563 | 61/200/373 | 0.176 |
+| çekirdek 401 + duvar payı ≥ 0.7 | 260/58/342 | 0.818 / 0.432 / 0.565 | 47/222/387 | 0.134 |
+| geniş açıklıklar (sınır + oda bölme), 151, pay 0.6 | 271/67/331 | 0.802 / 0.450 / 0.577 | 68/176/366 | 0.201 |
+| geniş + parça boşlukları, 151, pay 0.7 | 313/127/289 | 0.711 / 0.520 / 0.601 | 85/176/349 | 0.245 |
+| geniş + parça + köşe boşlukları, 151, pay 0.6 | 331/583/271 | 0.362 / 0.550 / 0.437 | 27/247/407 | 0.076 |
+| geniş + parça, 251, pay 0.7 | 322/132/280 | 0.709 / 0.535 / 0.610 | 90/194/344 | 0.251 |
+| **geniş + parça, 301, pay 0.8** | **328/118/274** | **0.735 / 0.545 / 0.626** | **94/196/340** | **0.260** |
+| geniş + parça, 401, pay 0.7 | 336/134/266 | 0.715 / 0.558 / 0.627 | 96/212/338 | 0.259 |
+| geniş + parça, 501, pay 0.7 | 341/136/261 | 0.715 / 0.566 / 0.632 | 98/218/336 | 0.261 |
+| geniş + parça, 601, pay 0.8 | 333/121/269 | 0.733 / 0.553 / 0.631 | 96/206/338 | 0.261 |
+
+- **Geniş açıklık:** parça ucundan 150-450 px ötede, aynı doğrultuda (≤ 10°,
+  orta çizgi ≤ yarım kalınlık + 4 px) sürüyorsa kapatılır. Aynı doğrultu
+  şartı ışının odanın karşı duvarına çarpmasını önlüyor.
+- **Duvar payı:** ayak izi içindeki bölgenin çevre pikselleri duvar/kirişe mi
+  ayak izi dışına mı komşu; payı eşiğin altındaki bölge dış (sundurma,
+  teras).
+- Çekirdek 301'den sonra plato (farklar ≤ 0.006 F1). En yükseği değil,
+  platonun başı seçildi: daha küçük çekirdek ölçeğe daha az bağlı ve hızlı.
+- Bu tabloda sınır ve oda bölme kaynakları dışında her şey aynı; eşikler
+  aynı geliştirme planlarında seçildi.
+
+**Seçilenin kalan hataları:**
+
+| kaçan oda (274) | | bulunamayan kenar (340) | |
+|---|---|---|---|
+| kapısı kapanmadığı için birleşti | 99 | odalardan biri yok | 215 |
+| duvarsız ayrım yüzünden birleşti (bulunamaz) | 91 | kapı yok | 105 |
+| dış | 40 | yanlış oda çiftine bağlandı | 20 |
+| başka nedenle birleşti | 33 | | |
+| kısmi | 11 | | |
+
+- Duvarsız ayrım 91 odayı birleştiriyor: bu yöntemle oda duyarlılığının
+  üst sınırı yaklaşık (602 - 91) / 602 = 0.85.
+- "Yanlış oda" 20: parça boşluğu kirişi kapının yanından geçince kapının bir
+  yanı yanlış bölgede kalıyor (§9'da 0'dı).
+
+**Uçtan uca doğrulama:** `scripts/degerlendir.py` (`akis.plani_coz` + bütün
+ölçüler) geliştirmede ayrı deneylerin sayılarını birebir verdi: duvar 0.926
+/ 0.880, kapı 421/10/134, pencere 335/89/239, oda 328/118/274, kenar
+94/196/340. Plan başına süre medyan 2.1 s.
