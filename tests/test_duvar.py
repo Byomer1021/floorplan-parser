@@ -3,8 +3,14 @@ import numpy as np
 import pytest
 
 from floorplan_parser.degerlendirme import iou, parca_eslestir, parca_maskesi
-from floorplan_parser.duvar import Parca, duvarlari_bul
-from floorplan_parser.onisleme import duvar_adayi, ikile, kalin_ayir, kapa
+from floorplan_parser.duvar import (
+    Parca,
+    duvarlari_bul,
+    iki_olcekli_duvarlar,
+    ince_aday_maskesi,
+    ince_ozellikler,
+)
+from floorplan_parser.onisleme import delik_doldur, duvar_adayi, ikile, kalin_ayir, kapa
 from floorplan_parser.sentetik import SentetikPlan, plan_ciz
 
 
@@ -84,3 +90,28 @@ def test_parca_maskesi_ust_uste_binen_kose_dolu():
     b = Parca(10, 10, 10, 60, 6.0, (10, 7, 10, 60))
     m = parca_maskesi([a, b], (80, 80))
     assert m[8:13, 8:13].min() == 255
+
+
+def test_tek_cekirdek_bolme_duvarla_merdiveni_ayiramaz():
+    # 24 px dış duvar, 8 px bölme duvar, 8 px'lik altı merdiven basamağı.
+    p = plan_ciz(duvar=24, ic_duvar=8, merdiven=True)
+    assert parca_eslestir(duvarlari_bul(duvar_adayi(p.goruntu, 7)), _cevap(p), 2) == (7, 6, 0)
+    assert parca_eslestir(duvarlari_bul(duvar_adayi(p.goruntu, 13)), _cevap(p), 2) == (5, 0, 2)
+
+
+def test_iki_olcek_bolme_duvari_alir_merdiveni_birakir():
+    p = plan_ciz(duvar=24, ic_duvar=8, merdiven=True)
+    _, kalin_p, ince_p = iki_olcekli_duvarlar(delik_doldur(ikile(p.goruntu), 4))
+    assert len(ince_p) == 2
+    assert parca_eslestir(kalin_p + ince_p, _cevap(p), uc_tol=2) == (7, 0, 0)
+    assert {x.kalinlik for x in ince_p} == {8.0}
+    assert iou(parca_maskesi(kalin_p + ince_p, p.goruntu.shape), p.duvar_maskesi) > 0.999
+
+
+def test_merdiven_paralel_komsu_sayisi():
+    p = plan_ciz(duvar=24, ic_duvar=8, merdiven=True)
+    _, aday = ince_aday_maskesi(delik_doldur(ikile(p.goruntu), 4), 13, 7)
+    adaylar = duvarlari_bul(aday)
+    basamak = [x for x in adaylar if abs(x.y1 - x.y2) < 1]
+    assert len(basamak) == 6
+    assert min(ince_ozellikler(x, aday, adaylar, 60)["paralel"] for x in basamak) >= 3

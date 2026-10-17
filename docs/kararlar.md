@@ -112,7 +112,7 @@ maskeye uzatma → kavşağa çekme → enine kalınlık ölçümü (`duvar.py`)
 takibiyle parçalara bölme. Raporda "neden Hough" sorusu için en az biri
 gerekli.
 
-## K-007: İnce bölme duvarlar, açık (2026-10-17)
+## K-007: İnce bölme duvarlar: iki ölçek, geçerli (2026-10-17)
 
 CVC-FP dolu duvarlı planlarda iki duvar ailesi var: ~25 piksel dış/taşıyıcı
 ve ~7-8 piksel dolu siyah bölme duvar. Merdiven çizgisi gibi çizimler de bu
@@ -120,12 +120,23 @@ kalınlıkta (bir örnekte görüldü). Tek çekirdekle açma ikisini ayıramıy
 k=7 bölme duvarı tutuyor ama merdiveni de duvar sayıyor, k≥9 bölme duvarı
 kaybediyor.
 
-**Seçenekler (denenmedi):**
+**Seçenekler:**
 
-- a) İki ölçek: kalın maske (k≈13) kesin duvar; ince aday (k≈5-7 maskesi
-  eksi kalın) yalnız kurala uyarsa duvar: düz, kalınlığı boyunca sabit,
-  iki ucu da başka duvara ya da kapı/pencere boşluğuna dayanıyor.
-- b) İnce adayları uzunluk ve kalın duvara bağlılıkla elemek (a'nın sade
-  hali).
+- a) **İki ölçek** (`duvar.iki_olcekli_duvarlar`): kalın maske (k=13) her
+  zaman duvar; ince aday (k=7 maskesi eksi kalın) Hough parçalarına bölünür,
+  parça kurala uyarsa duvar: uzunluk ≥ 45, kalınlık ≤ 10, kalınlık değişimi
+  (IQR/medyan) ≤ 0.2, yakın paralel komşu ≤ 1 (merdiven). İnce parçanın ucu
+  kalın duvarın orta çizgisine çekilir.
+- b) Uçların duvara bağlılığını da isteyen graf kuralı. Gerçek bölme
+  duvarların yarısı kalın duvara değil başka bölme duvara bağlanıyor, bu
+  yüzden bağlantı tek tek değil graf üzerinden bakılmalı. Denenmedi.
 - c) Plan başına kalınlık histogramından iki tepe bulup eşiği plana göre
-  seçmek.
+  seçmek. Denenmedi.
+
+**Seçilen: (a), 2026-10-17.** Geliştirmede maske IoU 0.84 → 0.926, parça
+IoU 0.81 → 0.880; tavana oran 0.977 ([olcumler §6](olcumler.md)). Eşikler
+aynı geliştirme planlarında seçildi; test bölümünde bir kez ölçülecek.
+
+**Bilinen yanlış:** tek başına duran, uzun, düz, duvar kalınlığındaki çizgi
+(merdiven taban çizgisi) duvar sayılıyor. (b) bunu eler; şimdilik alanca
+etkisi küçük (adaylar içinde kesinlik 0.998).

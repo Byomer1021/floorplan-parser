@@ -76,9 +76,22 @@ def _duvar_ciz(maske: np.ndarray, d: Duvar) -> None:
         raise ValueError("yalnız yatay/dikey duvar")
 
 
-def plan_ciz(duvar: int = 10, ince: int = 2, gurultu: float = 0.0, tohum: int = 0) -> SentetikPlan:
-    """600x400 plan. ``gurultu``: her pikselin rastgele ters çevrilme olasılığı."""
+def plan_ciz(
+    duvar: int = 10,
+    ince: int = 2,
+    gurultu: float = 0.0,
+    tohum: int = 0,
+    ic_duvar: int | None = None,
+    merdiven: bool = False,
+) -> SentetikPlan:
+    """600x400 plan. ``gurultu``: her pikselin rastgele ters çevrilme olasılığı.
+
+    ``ic_duvar``: iç (bölme) duvarın kalınlığı, verilmezse ``duvar``.
+    ``merdiven``: oda 2'ye altı paralel basamak çizgisi, iç duvar
+    kalınlığında. Duvar değil; tek açma çekirdeği bölme duvarla ayıramaz.
+    """
     h = duvar // 2
+    ic = ic_duvar or duvar
     kapi = Kapi(mentese=(300, 180), genislik=60)
     pencere = Pencere(x1=100, x2=200, y=350)
     mx, my = kapi.mentese
@@ -89,16 +102,19 @@ def plan_ciz(duvar: int = 10, ince: int = 2, gurultu: float = 0.0, tohum: int = 
         Duvar(550, 50, 550, 350, duvar),  # sağ
         Duvar(50, 350, pencere.x1, 350, duvar),  # alt, pencereye kadar
         Duvar(pencere.x2, 350, 550, 350, duvar),  # alt, pencereden sonra
-        Duvar(300, 50, 300, my, duvar),  # iç duvar, kapıya kadar
-        Duvar(300, my + r, 300, 350, duvar),  # iç duvar, kapıdan sonra
+        Duvar(300, 50, 300, my, ic),  # iç duvar, kapıya kadar
+        Duvar(300, my + r, 300, 350, ic),  # iç duvar, kapıdan sonra
     ]
 
     maske = np.zeros((400, 600), np.uint8)
     for d in duvarlar:
         _duvar_ciz(maske, d)
-    maske[my : my + r, mx - h : mx + h] = 0
+    maske[my : my + r, mx - ic // 2 : mx + ic // 2] = 0
     maske[pencere.y - h : pencere.y + h, pencere.x1 : pencere.x2] = 0
     goruntu = np.where(maske > 0, MUREKKEP, KAGIT).astype(np.uint8)
+    if merdiven:
+        for y in range(110, 230, 20):
+            goruntu[y - ic // 2 : y + ic // 2, 420:500] = MUREKKEP
 
     # Kapı: açık kanat (menteşeden sağa) ve kapalı konumdan açığa çeyrek yay.
     cv2.line(goruntu, (mx, my), (mx + r, my), MUREKKEP, ince)

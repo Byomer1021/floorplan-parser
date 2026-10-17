@@ -174,3 +174,77 @@ duvar maskesiyle, plan başına; medyan [%10-%90].
   yazısı vb.); k=13'te 0. Plan alanını ayırmak ayrı bir adım olabilir.
 - Görsel: `results/ara/duvar_parcalar_ornek.png` (depoda değil). Dış
   duvarlar pencerelerde doğru bölünüyor, köşe uçları kesişimde.
+
+## §6 İnce bölme duvarlar: iki ölçek (2026-10-17)
+
+K-007 (a). Yalnız geliştirme, I-II dolu duvarlı 62 plan.
+
+**Aday incelemesi** (`scripts/ince_aday_ozellik.py`): ince aday = k_ince
+açmasından kalan, kalın maskenin (k=13) 1 px genişletilmişi dışındaki kısım;
+Hough parçalarına bölünür. Etiket: parçanın dikdörtgeninin cevaptaki duvarla
+örtüşmesi ≥ 0.5. Örtüşme ikiye ayrık: 4729 parça < 0.1, 851 parça ≥ 0.7,
+arası yok.
+
+| k_ince | aday | duvar | duvarın alan payı |
+|---|---|---|---|
+| 7 | 5580 | 851 (%15.3) | %38.4 |
+| 5 | 6944 | 898 (%12.9) | %36.5 |
+
+Özellik dağılımı, k_ince=7, yüzdelik 10 / 50 / 90:
+
+| özellik | duvar | duvar değil |
+|---|---|---|
+| uzunluk (px) | 75 / 184 / 365 | 29 / 37 / 59 |
+| kalınlık (px) | 7 / 7 / 8 | 10.5 / 13 / 36 |
+| kalınlık değişimi (IQR/medyan) | 0 / 0 / 0 | 0.03 / 0.84 / 2.0 |
+| doluluk | 1 / 1 / 1 | 0.73 / 1 / 1 |
+| yakın paralel parça | 0 / 0 / 1 | 0 / 1 / 4 |
+| uca en yakın kalın duvar (px) | 1 / 2 / 299 | 27 / 167 / 373 |
+
+- Duvar olmayan kalın adaylar (kalınlık 13-37) başlık yazısının kalın
+  harfleri (IIa_BK0701'de "Plan du Rez de Chaussée", görüntüyle bakıldı).
+- Gerçek bölme duvarların yarısı bir ucuyla kalın duvara değiyor (≤ 2 px);
+  kalanı başka bölme duvarlara bağlanıyor. Bağlantı kuralı bu yüzden
+  "kalın duvara değer" olamaz; graf gerekir. Şimdilik gerekmedi (aşağıda).
+- Zor yanlış: merdivenin taban çizgisi (IIa_BK0701) uzun, düz, 7 px, tek;
+  kurallar bunu geçiriyor.
+
+**Kural taraması** (alanca, adaylar içinde; 4 eşik, kaba ızgara, aynı
+geliştirme planlarında seçildi, iyimser olabilir):
+
+| k_ince | kural | seçilen | doğru | kesinlik | duyarlılık |
+|---|---|---|---|---|---|
+| 7 | uzunluk ≥ 45, kalınlık ≤ 10, değişim ≤ 0.2, paralel ≤ 1 | 829 | 827 | 0.998 | 0.987 |
+| 5 | aynı | 893 | 856 | 0.989 | 0.962 |
+
+Seçilen: k_ince=7 ve bu kural (`duvar.InceKural`).
+
+**Sentetik plan** (24 px dış, 8 px bölme duvar, 8 px'lik 6 merdiven
+basamağı; `plan_ciz(duvar=24, ic_duvar=8, merdiven=True)`):
+
+| akış | doğru / fazla / eksik |
+|---|---|
+| tek çekirdek k=7 | 7 / 6 / 0 (basamaklar duvar) |
+| tek çekirdek k=13 | 5 / 0 / 2 (bölme duvar yok) |
+| iki ölçek | 7 / 0 / 0, parça IoU 0.9996 |
+
+Basamakların paralel komşu sayısı 3-5. Bölme duvarın uçları kalın duvarın
+orta çizgisine çekiliyor (49.4; cevap 49.5).
+
+**CVC-FP, iki ölçek** (`duvar_deney.py --yontem iki --kalinlik 13 --k-ince 7`):
+
+| akış | maske IoU | parça IoU | süre / plan |
+|---|---|---|---|
+| tek k=7 (§5) | 0.844 [0.770-0.870] | 0.796 [0.738-0.839] | 1.1 s |
+| tek k=13 (§5) | 0.841 [0.759-0.900] | 0.812 [0.744-0.856] | 0.6 s |
+| **iki ölçek** | **0.926** [0.845-0.946] | **0.880** [0.821-0.929] | 1.3 s (en çok 2.8) |
+
+- Plan başına fark (iki - tek): k=7'ye göre maske +0.078 medyan
+  [%10 +0.059, %90 +0.104], 61/62 planda daha iyi; k=13'e göre +0.081,
+  62/62.
+- Tavana oran (maske IoU / dolgu) medyan 0.977.
+- k=7'den kötü tek plan IIa_BK0703: 0.9002'ye 0.9008, pratikte eşit. Hata
+  haritası: kalan hata duvar kenarlarında ince şeritler (cevap poligonu
+  mürekkepten biraz geniş) ve bir kısa duvar parçası.
+- Maske ile parça IoU arası 0.046: ince parçalar kalın duvara 1 px kala
+  bitiyor; kısa ve dikdörtgen olmayan parçalar kayboluyor. Ayrıştırılmadı.

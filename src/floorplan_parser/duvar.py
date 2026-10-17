@@ -16,11 +16,13 @@ duvar olur (onisleme'deki kapama sorununun aynısı).
 """
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import cv2
 import numpy as np
 from skimage.morphology import skeletonize
+
+from floorplan_parser.onisleme import ac
 
 
 @dataclass(frozen=True)
@@ -135,6 +137,29 @@ def uzat(
     return np.concatenate([a - ta * d, b + tb * d])
 
 
+def enine_profil(
+    parca: np.ndarray,
+    maske: np.ndarray,
+    sinir: float = 200,
+    adim: float = 0.25,
+    aralik: tuple[float, float] = (0.1, 0.9),
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Orta çizgi boyunca örnek başına (artı yana, eksi yana, merkez içeride mi).
+
+    Örnekler ``aralik`` kesrinde, iki pikselde bir. Merkez maske dışındaysa
+    iki yan da 0 çıkar (boşluk).
+    """
+    a, b = parca[:2], parca[2:]
+    d = (b - a) / max(np.linalg.norm(b - a), 1e-9)
+    n = np.array([-d[1], d[0]])
+    t = np.linspace(*aralik, max(int(np.linalg.norm(b - a)) // 2, 3))[:, None]
+    p = a + t * (b - a)
+    h, w = maske.shape
+    x = np.clip(np.floor(p[:, 0] + 0.5).astype(int), 0, w - 1)
+    y = np.clip(np.floor(p[:, 1] + 0.5).astype(int), 0, h - 1)
+    return _yuru(maske, p, n, sinir, adim), _yuru(maske, p, -n, sinir, adim), maske[y, x] > 0
+
+
 def enine_olc(
     parca: np.ndarray, maske: np.ndarray, sinir: float = 200, adim: float = 0.25
 ) -> tuple[np.ndarray, float]:
@@ -147,10 +172,8 @@ def enine_olc(
     a, b = parca[:2], parca[2:]
     d = (b - a) / max(np.linalg.norm(b - a), 1e-9)
     n = np.array([-d[1], d[0]])
-    t = np.linspace(0.1, 0.9, max(int(np.linalg.norm(b - a)) // 2, 3))[:, None]
-    p = a + t * (b - a)
-    arti = float(np.median(_yuru(maske, p, n, sinir, adim)))
-    eksi = float(np.median(_yuru(maske, p, -n, sinir, adim)))
+    arti_s, eksi_s, _ = enine_profil(parca, maske, sinir, adim)
+    arti, eksi = float(np.median(arti_s)), float(np.median(eksi_s))
     kayma = (arti - eksi) / 2
     # Son içeride nokta ile sınır arası ortalama yarım adım, iki yanda bir adım.
     return parca + np.tile(kayma * n, 2), arti + eksi + adim
@@ -165,14 +188,22 @@ def _kesisim(p1, p2, q1, q2) -> np.ndarray | None:
     return p1 + t * r
 
 
-def kavsaklara_cek(parcalar: np.ndarray, kalinliklar: np.ndarray, min_aci: float) -> np.ndarray:
+def kavsaklara_cek(
+    parcalar: np.ndarray,
+    kalinliklar: np.ndarray,
+    min_aci: float,
+    oynar: set[int] | None = None,
+) -> np.ndarray:
     """Başka duvara yakın ucu iki orta çizginin kesişimine taşır.
 
     Yakınlık: uç, kesişim noktasına iki kalınlıktan büyüğü kadar yakın ve
     kesişim öbür parçanın üzerinde (uçlarından yarım kalınlık taşmaya izinle).
+    ``oynar`` verilirse yalnız o parçaların uçları taşınır; hedef hepsi.
     """
     yeni = parcalar.copy()
     for i, p in enumerate(parcalar):
+        if oynar is not None and i not in oynar:
+            continue
         for uc in (0, 1):
             e = p[2 * uc : 2 * uc + 2]
             en_iyi, en_iyi_uzaklik = None, math.inf
@@ -224,3 +255,109 @@ def duvarlari_bul(
         for p, k, u in zip(cekili, kalinliklar, kapsam)
         if np.linalg.norm(u[2:] - u[:2]) >= min_uzunluk
     ]
+
+
+@dataclass(frozen=True)
+class InceKural:
+    """İnce aday parçanın duvar sayılma koşulları (K-007, eşikler geliştirme
+    bölümünde seçildi, docs/olcumler.md §6)."""
+
+    min_uzunluk: float = 45
+    max_kalinlik: float = 10
+    max_degisim: float = 0.2  # kalınlık IQR / medyan
+    max_paralel: int = 1  # merdiven basamakları paralel ve yakın
+    paralel_uzaklik: float = 60
+
+
+VARSAYILAN_INCE_KURAL = InceKural()
+
+
+def ince_ozellikler(
+    p: Parca, maske: np.ndarray, hepsi: list[Parca], paralel_uzaklik: float
+) -> dict:
+    """Uzunluk, kalınlık (medyan), kalınlık değişimi, doluluk, paralel komşu sayısı."""
+    k = np.array(p.kapsam or (p.x1, p.y1, p.x2, p.y2))
+    arti, eksi, merkez = enine_profil(k, maske, aralik=(0.05, 0.95))
+    gen = (arti + eksi + 0.25)[merkez]
+    a, b = k[:2], k[2:]
+    uzunluk = float(np.linalg.norm(b - a))
+    d = (b - a) / max(uzunluk, 1e-9)
+    n = np.array([-d[1], d[0]])
+    paralel = 0
+    for q in hepsi:
+        if q is p or aci_farki(q.aci, p.aci) > math.radians(3):
+            continue
+        qk = np.array(q.kapsam or (q.x1, q.y1, q.x2, q.y2))
+        qa, qb = qk[:2], qk[2:]
+        if abs(((qa + qb) / 2 - a) @ n) > paralel_uzaklik:
+            continue
+        t0, t1 = sorted([(qa - a) @ d, (qb - a) @ d])
+        if min(t1, uzunluk) - max(t0, 0) >= 0.5 * min(uzunluk, t1 - t0):
+            paralel += 1
+    if len(gen):
+        medyan = float(np.median(gen))
+        degisim = float(np.subtract(*np.percentile(gen, [75, 25])) / max(medyan, 1e-9))
+    else:
+        medyan, degisim = 0.0, math.inf
+    return {
+        "uzunluk": uzunluk,
+        "kalinlik": medyan,
+        "kalinlik_degisim": degisim,
+        "doluluk": float(merkez.mean()),
+        "paralel": paralel,
+    }
+
+
+def ince_secer(oz: dict, kural: InceKural) -> bool:
+    return (
+        oz["uzunluk"] >= kural.min_uzunluk
+        and oz["kalinlik"] <= kural.max_kalinlik
+        and oz["kalinlik_degisim"] <= kural.max_degisim
+        and oz["paralel"] <= kural.max_paralel
+    )
+
+
+def ince_aday_maskesi(
+    ikili: np.ndarray, k_kalin: int, k_ince: int
+) -> tuple[np.ndarray, np.ndarray]:
+    """(kalın maske, ince aday maskesi). İnce aday: k_ince açmasından kalan,
+    kalın maskenin 1 piksel genişletilmişi dışında kalan kısım."""
+    kalin = ac(ikili, k_kalin)
+    genis = cv2.dilate(kalin, np.ones((3, 3), np.uint8))
+    return kalin, cv2.bitwise_and(ac(ikili, k_ince), cv2.bitwise_not(genis))
+
+
+def iki_olcekli_duvarlar(
+    ikili: np.ndarray,
+    k_kalin: int = 13,
+    k_ince: int = 7,
+    kural: InceKural = VARSAYILAN_INCE_KURAL,
+    max_bosluk: int = 20,
+) -> tuple[np.ndarray, list[Parca], list[Parca]]:
+    """K-007 (a): kalın duvarlar her zaman, ince adaylar kurala uyarsa.
+
+    ``ikili``: mürekkep 255 (ör. ``onisleme.delik_doldur(ikile(gri), 4)``).
+    Dönüş: (kalın maske, kalın parçalar, seçilen ince parçalar).
+    """
+    kalin, aday = ince_aday_maskesi(ikili, k_kalin, k_ince)
+    kalin_parcalar = duvarlari_bul(kalin, max_bosluk)
+    adaylar = duvarlari_bul(aday, max_bosluk)
+    secilen = [
+        p
+        for p in adaylar
+        if ince_secer(ince_ozellikler(p, aday, adaylar, kural.paralel_uzaklik), kural)
+    ]
+    if not secilen:
+        return kalin, kalin_parcalar, secilen
+    # İnce parça kalın maskenin 1 piksel genişletilmişinden kesildi: ucu kalın
+    # duvarın yüzünde. Graf ucu için kalın duvarın orta çizgisine çekilir.
+    hepsi = kalin_parcalar + secilen
+    uclar = np.array([[p.x1, p.y1, p.x2, p.y2] for p in hepsi])
+    kalinliklar = np.array([p.kalinlik for p in hepsi])
+    oynar = set(range(len(kalin_parcalar), len(hepsi)))
+    cekili = kavsaklara_cek(uclar, kalinliklar, math.radians(20), oynar)
+    secilen = [
+        replace(p, x1=float(u[0]), y1=float(u[1]), x2=float(u[2]), y2=float(u[3]))
+        for p, u in zip(secilen, cekili[len(kalin_parcalar) :])
+    ]
+    return kalin, kalin_parcalar, secilen
