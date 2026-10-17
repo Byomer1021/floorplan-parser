@@ -37,11 +37,12 @@ sayı ölçüldüğü anda girer. Test bölümüne henüz bakılmadı.
 - **Kapı ve pencere** (aynı 62 plan): kapı kesinlik 0.977, duyarlılık
   0.759, F1 0.854; pencere F1 0.671 ([olcumler §8](docs/olcumler.md)).
   Kalan kapı hatalarının çoğu yarı açık çizilmiş kapılar.
-- **Oda grafı** (aynı 62 plan): oda F1 0.626 (kesinlik 0.735, duyarlılık
-  0.545), kapı kenarı F1 0.260 ([olcumler §9-10](docs/olcumler.md)). Kaçan
-  odaların çoğu kapısı kapanmayan ya da duvarsız ayrımı olan komşusuyla
-  birleşiyor; kenar için iki odanın ikisi de bulunmalı.
-- Uçtan uca `akis.plani_coz`; plan başına medyan 2.1 s.
+- **Oda grafı** (aynı 62 plan): oda F1 0.706 (kesinlik 0.769, duyarlılık
+  0.653), kapı kenarı F1 0.322 ([olcumler §9-11](docs/olcumler.md)). Odalar
+  uzaklık dönüşümü + watershed ile bölünüyor. Kaçan odaların en büyük payı
+  duvarsız ayrımı olan komşuyla birleşenler (bu yöntemle bulunamaz); kenar
+  için iki odanın ikisi de bulunmalı.
+- Uçtan uca `akis.plani_coz`; plan başına medyan 4.2 s.
 - Eşikler geliştirme bölümünde seçildi; **test bölümünde henüz
   ölçülmedi.**
 - **Bilinen yanlış:** merdivenin taban çizgisi gibi tek duran, duvar
@@ -61,7 +62,7 @@ sayı ölçüldüğü anda girer. Test bölümüne henüz bakılmadı.
 | 5 | Duvar | iskelet + olasılıksal Hough, eşdoğrusal birleştirme, kavşağa çekme | `duvar` | ilk sürüm |
 | 6 | Kapı | duvar ucundan ışınla boşluk + 4 varsayımlı çeyrek yay testi | `aciklik` | yazıldı |
 | 7 | Pencere | boşlukta paralel ince çizgiler; küçük yay kanatlı pencere | `aciklik` | yazıldı |
-| 8 | Graf | boşlukları kirişle kapat (geniş açıklıklar dahil) + ayak izi + bağlı bileşen; kapı iki yandaki odayı bağlar | `oda`, `akis` | yazıldı |
+| 8 | Graf | boşlukları kirişle kapat (geniş açıklıklar dahil) + ayak izi + uzaklık dönüşümü ve watershed; kapı iki yandaki odayı bağlar | `oda`, `akis` | yazıldı |
 | 9 | Değerlendirme | duvar piksel IoU; kapı/pencere/oda IoU ≥ 0.5 eşleme; kenar = kapı + iki oda | `degerlendirme`, `cvcfp` | hepsi |
 
 `sentetik` modülü cevabı bilinen plan çizer; her adımın testi önce orada

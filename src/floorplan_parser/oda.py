@@ -23,6 +23,8 @@ from dataclasses import dataclass
 import cv2
 import networkx as nx
 import numpy as np
+from scipy import ndimage
+from skimage.segmentation import watershed
 
 from floorplan_parser.aciklik import Bosluk, Kapi, Pencere
 from floorplan_parser.duvar import duvarlari_bul
@@ -40,6 +42,10 @@ class OdaKural:
     # Ayak izi içindeki bölgenin çevresinde duvar/kiriş payı bunun altındaysa
     # dış sayılır (büyük çekirdeğin içeri aldığı sundurma, teras). 0 = kapalı.
     min_duvar_payi: float = 0.8
+    # Havza bölütleme (``havza_bolutle``): çekirdek eşiği px (0 = bağlı bileşen)
+    # ve geniş geçitte birleşme oranı.
+    havza_cekirdek: float = 45.0  # geliştirmede 35-55 plato (§11)
+    havza_birlesme: float = 0.8
 
 
 VARSAYILAN_ODA_KURAL = OdaKural()
@@ -127,6 +133,88 @@ def ayak_izi(duvar_maske: np.ndarray, cekirdek: int) -> np.ndarray:
     return np.where(kapali[pay:-pay, pay:-pay] == 128, 0, 255).astype(np.uint8)
 
 
+def havza_bolutle(
+    bos: np.ndarray, cekirdek: float, birlesme: float
+) -> tuple[int, np.ndarray, np.ndarray, np.ndarray]:
+    """Boş alanı uzaklık dönüşümü + watershed ile böler.
+
+    Çekirdek: duvara uzaklığı ≥ ``cekirdek`` olan piksellerin bileşenleri (oda
+    ortaları); çekirdeği olmayan küçük bileşen kendi işaretçisi. Havzalar
+    dar geçitlerde (kapı, kapanmamış açıklık) buluşur. İki komşu havza,
+    aralarındaki eyerin yüksekliği küçük tepenin ``birlesme`` katından
+    büyükse (geçit geniş: L biçimli oda, girinti) birleşir.
+
+    Dönüş ``cv2.connectedComponentsWithStats`` ile aynı biçimde:
+    (n, etiket, istat [x, y, gen, yuk, alan], merkez).
+    """
+    dt = cv2.distanceTransform(bos.astype(np.uint8), cv2.DIST_L2, 5)
+    n_c, isaret = cv2.connectedComponents((dt >= cekirdek).astype(np.uint8), connectivity=8)
+    n_b, bilesen = cv2.connectedComponents(bos.astype(np.uint8), connectivity=4)
+    cekirdekli = np.zeros(n_b, bool)
+    cekirdekli[np.unique(bilesen[dt >= cekirdek])] = True
+    cekirdekli[0] = True
+    ek = np.zeros(n_b, np.int32)
+    eksik = np.flatnonzero(~cekirdekli)
+    ek[eksik] = n_c + np.arange(len(eksik))
+    isaret = isaret.astype(np.int32)
+    ek_harita = ek[bilesen]
+    isaret[ek_harita > 0] = ek_harita[ek_harita > 0]
+    lab = watershed(-dt, isaret, mask=bos)
+
+    # Komşu havza çiftleri ve aralarındaki eyer (sınırdaki en yüksek uzaklık).
+    m = int(lab.max()) + 1
+    tepe = np.zeros(m)
+    np.maximum.at(tepe, lab.ravel(), dt.ravel())
+    ciftler, degerler = [], []
+    for a, b, da, db in (
+        (lab[:, :-1], lab[:, 1:], dt[:, :-1], dt[:, 1:]),
+        (lab[:-1, :], lab[1:, :], dt[:-1, :], dt[1:, :]),
+    ):
+        s = (a != b) & (a > 0) & (b > 0)
+        ciftler.append(np.stack([np.minimum(a[s], b[s]), np.maximum(a[s], b[s])], 1))
+        degerler.append(np.minimum(da[s], db[s]))
+    ata = np.arange(m)
+
+    def kok(i):
+        while ata[i] != i:
+            ata[i] = ata[ata[i]]
+            i = ata[i]
+        return i
+
+    cift = np.vstack(ciftler) if ciftler else np.zeros((0, 2), int)
+    deger = np.concatenate(degerler) if degerler else np.zeros(0)
+    if len(cift):
+        anahtar = cift[:, 0].astype(np.int64) * m + cift[:, 1]
+        sira = np.lexsort((deger, anahtar))
+        anahtar, deger, cift = anahtar[sira], deger[sira], cift[sira]
+        son = np.r_[anahtar[1:] != anahtar[:-1], True]
+        for (a, b), eyer in zip(cift[son], deger[son]):
+            if eyer >= birlesme * min(tepe[a], tepe[b]):
+                ra, rb = kok(a), kok(b)
+                if ra != rb:
+                    ata[rb] = ra
+    kokler = np.array([kok(i) for i in range(m)])
+    benzersiz, yeni = np.unique(kokler, return_inverse=True)
+    etiket = yeni[lab].astype(np.int32)  # 0 kökü 0'a gider (lab 0 → kök 0)
+    n = len(benzersiz)
+    alan = np.bincount(etiket.ravel(), minlength=n)
+    ys, xs = np.indices(etiket.shape)
+    sx = np.bincount(etiket.ravel(), xs.ravel(), minlength=n)
+    sy = np.bincount(etiket.ravel(), ys.ravel(), minlength=n)
+    merkez = np.stack([sx / np.maximum(alan, 1), sy / np.maximum(alan, 1)], 1)
+    istat = np.zeros((n, 5), np.int64)
+    istat[:, 4] = alan
+    for i, dilim in enumerate(ndimage.find_objects(etiket), start=1):
+        if dilim is not None:
+            istat[i, :4] = [
+                dilim[1].start,
+                dilim[0].start,
+                dilim[1].stop - dilim[1].start,
+                dilim[0].stop - dilim[0].start,
+            ]
+    return n, etiket, istat, merkez
+
+
 def odalar(
     kapali: np.ndarray, kural: OdaKural = VARSAYILAN_ODA_KURAL, ayak: np.ndarray | None = None
 ) -> tuple[np.ndarray, list[Oda]]:
@@ -136,9 +224,12 @@ def odalar(
     bos = kapali == 0
     if ayak is not None:
         bos &= ayak > 0
-    n, etiket, istat, merkez = cv2.connectedComponentsWithStats(
-        bos.astype(np.uint8), connectivity=4
-    )
+    if kural.havza_cekirdek > 0:
+        n, etiket, istat, merkez = havza_bolutle(bos, kural.havza_cekirdek, kural.havza_birlesme)
+    else:
+        n, etiket, istat, merkez = cv2.connectedComponentsWithStats(
+            bos.astype(np.uint8), connectivity=4
+        )
     h, w = kapali.shape
     x, y, gen, yuk, alan = istat.T
     if ayak is None:

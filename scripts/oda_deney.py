@@ -42,7 +42,7 @@ from floorplan_parser.oda import DIS, VARSAYILAN_ODA_KURAL, ince_sinirlar, oda_g
 from floorplan_parser.onisleme import delik_doldur, ikile
 
 SONUC = Path(__file__).resolve().parents[1] / "results"
-VARSAYILAN_VARYANT = "genis:pg:0:301:0.8"  # akis.plani_coz ile aynı
+VARSAYILAN_VARYANT = "genis:pg:0:301:0.8:45:0.8"  # akis.plani_coz ile aynı
 
 
 def cevap_kenarlari(c) -> tuple[dict, int]:
@@ -107,12 +107,15 @@ def main() -> None:
 
         for v in a.varyant:
             ayak_k, oda_k, ince_k, *ek_k = v.split(":")
-            # İsteğe bağlı: CEKIRDEK ve DUVAR_PAYI (ör. duvar:yok:0:401:0.6)
+            # İsteğe bağlı: CEKIRDEK:DUVAR_PAYI[:HAVZA_ESIK:HAVZA_BIRLESME]
+            # (ör. genis:pg:0:301:0.8:45:0.8)
             kural = VARSAYILAN_ODA_KURAL
             if ek_k:
                 kural = replace(
                     kural, ayak_izi_cekirdek=int(ek_k[0]), min_duvar_payi=float(ek_k[1])
                 )
+            if len(ek_k) >= 4:
+                kural = replace(kural, havza_cekirdek=float(ek_k[2]), havza_birlesme=float(ek_k[3]))
             if ince_k == "1" and sinir is None:
                 sinir = ince_sinirlar(ikili, duvar)
             t0 = time.perf_counter()

@@ -452,3 +452,79 @@ yapıyor. Ayak izi 414 bin px, yalnız duvarlar 264 bin px.
 ölçüler) geliştirmede ayrı deneylerin sayılarını birebir verdi: duvar 0.926
 / 0.880, kapı 421/10/134, pencere 335/89/239, oda 328/118/274, kenar
 94/196/340. Plan başına süre medyan 2.1 s.
+
+## §11 Yarı açık kapı (ikinci deneme) ve havza bölütleme (2026-10-18)
+
+Aynı 62 geliştirme planı.
+
+**Yarı açık kapı.** §8'deki kısmi açılma varsayımıyla bulunan 88 kapının
+hepsi 30° varsayımından (45° ve 60° hiç seçilmedi); 28 doğru, 60 yanlış.
+Yanlışların görüntüsü (12 örnek): dış duvardaki pencere çerçevesi; 30°'de
+aranan yay parçası (6-26°) çerçevenin duvara dik kısa kenarıyla çakışıyor.
+20°'lik yay 90 px yarıçapta düz çizgiden ~1.4 px sapıyor, yerel olarak
+ayırt edilemiyor. Kanat için "tek çizgi" testi (kanadın 7 px iki yanında
+mürekkep payı ≤ eşik) eklendi:
+
+| ayar | kapı D/F/E | kapı F1 | pencere F1 |
+|---|---|---|---|
+| kısmi kapalı (varsayılan) | 421/10/134 | 0.854 | 0.671 |
+| kısmi 0.95, 30/45/60°, kanat testi yok, pencere çizgili boşlukta kapalı | 449/66/106 | 0.839 | 0.626 |
+| kısmi 0.95, yalnız 45/60° | 421/10/134 | 0.854 | 0.671 |
+| kısmi 0.95, kanat yanı ≤ 0.3 | 441/62/114 | 0.834 | 0.620 |
+| kısmi 0.95, kanat yanı ≤ 0.15 | 438/47/117 | 0.842 | 0.636 |
+| kısmi 0.90, kanat yanı ≤ 0.15, pencere çizgili boşlukta kapalı | 438/40/117 | 0.848 | 0.645 |
+
+Son ayar uçtan uca (`degerlendir.py --kismi 0.9:0.15:0`, bağlı bileşen oda
+bölmeyle): oda F1 0.626 → 0.632, kenar F1 0.260 → 0.260. 17 kapı daha
+bulunuyor ama oda ve kenar kıpırdamıyor. Kısmi açılma kapalı kaldı.
+
+**Kapısı olan iki oda neden birleşik** (`plani_coz`, bağlı bileşen): 95 oda
+çiftinin 59'unda kapı bulunamamış; 36'sında kapı bulunmuş, kirişi doğru
+yerde, odalar başka bir yoldan (kapanmamış ikinci açıklık, girinti) sızıyor
+(3 örnek görüntüyle). Sızıntı yolları planlara göre değişiyor; tek tek
+yamamak yerine bölütleme değişti.
+
+**Havza bölütleme** (`oda.havza_bolutle`): boş alanın uzaklık dönüşümü;
+duvara uzaklığı ≥ eşik olan bileşenler çekirdek (oda ortası); watershed
+havzaları dar geçitlerde (kapı, kapanmamış açıklık) buluşur. İki komşu
+havza, aradaki eyer küçük tepenin `birlesme` katından yüksekse (geniş geçit:
+L biçimli oda) birleşir. Çekirdeksiz küçük bileşen kendi işaretçisi.
+
+| oda bölme (geniş + parça boşlukları, ayak izi 301, pay 0.8) | oda D/F/E | oda K / D / F1 | kenar D/F/E | kenar F1 |
+|---|---|---|---|---|
+| bağlı bileşen (§10) | 328/118/274 | 0.735 / 0.545 / 0.626 | 94/196/340 | 0.260 |
+| havza, eşik 35, birleşme 0.8 | 390/120/212 | 0.765 / 0.648 / 0.701 | 121/194/313 | 0.323 |
+| **havza, eşik 45, birleşme 0.8** | **393/118/209** | **0.769 / 0.653 / 0.706** | **121/197/313** | **0.322** |
+| havza, eşik 55, birleşme 0.8 | 395/115/207 | 0.775 / 0.656 / 0.710 | 119/197/315 | 0.317 |
+| havza 45, birleşme 0.6 | 391/115/211 | 0.773 / 0.650 / 0.706 | 121/197/313 | 0.322 |
+| havza 45, birleşme 0.9 | 393/119/209 | 0.768 / 0.653 / 0.706 | 121/197/313 | 0.322 |
+
+Eşik 35-55 ve birleşme 0.6-0.9 arasında oda F1 0.701-0.710: parametreye
+duyarsız. Eşik 45 (yaklaşık yarım kapı genişliği) seçildi.
+
+Havza ile öteki ayarların etkileşimi (havza 45 / 0.8):
+
+| değişen | oda F1 | kenar F1 |
+|---|---|---|
+| hiçbiri (varsayılan) | 0.706 | 0.322 |
+| oda bölmede parça boşlukları kapanmıyor | 0.687 (K 0.872, D 0.566) | 0.290 |
+| ayak izi çekirdeği 151 | 0.685 | 0.321 |
+| ayak izi ham duvardan | 0.704 | 0.328 |
+| duvar payı filtresi yok | 0.643 (234 fazla oda) | 0.316 |
+
+Varsayılan değişmedi.
+
+**Uçtan uca** (`scripts/degerlendir.py --bolum gelistirme`, ayrı deneylerle
+birebir aynı): duvar 0.926 / 0.880; kapı 421/10/134 (F1 0.854); pencere
+335/89/239 (F1 0.671); oda 393/118/209 (F1 0.706); kenar 121/197/313 (F1
+0.322). Plan başına süre medyan 4.2 s (havza 2.1 s ekliyor).
+
+**Kalan hatalar:**
+
+| kaçan oda (209) | | bulunamayan kenar (313) | |
+|---|---|---|---|
+| duvarsız ayrım yüzünden birleşti (bulunamaz) | 79 | odalardan biri yok | 184 |
+| kapısı kapanmadığı için birleşti | 62 | kapı yok | 105 |
+| dış | 40 | yanlış oda çiftine bağlandı | 24 |
+| kısmi | 13 | | |
+| başka nedenle birleşti | 15 | | |

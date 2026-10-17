@@ -44,10 +44,20 @@ def main() -> None:
     ap.add_argument("--esik", type=float, default=0.5)
     ap.add_argument("--yay-esik", type=float, default=VARSAYILAN_ACIKLIK_KURAL.yay_esik)
     ap.add_argument("--kismi-esik", type=float, default=VARSAYILAN_ACIKLIK_KURAL.kismi_esik)
+    ap.add_argument("--kismi-acilar", default="30,45,60")
+    ap.add_argument("--kismi-pencere", type=int, default=1)
+    ap.add_argument("--kismi-kanat-yan", type=float, default=0.3)
     ap.add_argument("--kapi-yontemi", default="bosluk_kose", choices=["bosluk", "bosluk_kose"])
     ap.add_argument("--etiket", default="")
     a = ap.parse_args()
-    kural = replace(VARSAYILAN_ACIKLIK_KURAL, yay_esik=a.yay_esik, kismi_esik=a.kismi_esik)
+    kural = replace(
+        VARSAYILAN_ACIKLIK_KURAL,
+        yay_esik=a.yay_esik,
+        kismi_esik=a.kismi_esik,
+        kismi_acilar=tuple(float(x) for x in a.kismi_acilar.split(",")),
+        kismi_pencerede=bool(a.kismi_pencere),
+        kismi_kanat_yan=a.kismi_kanat_yan,
+    )
 
     satirlar = []
     t_basla = time.perf_counter()

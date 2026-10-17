@@ -63,10 +63,14 @@ def main() -> None:
             )
         }
         for v in a.varyant:
-            ayak_k, oda_k, _, cek, pay = v.split(":")
+            ayak_k, oda_k, _, cek, pay, *havza = v.split(":")
             kural = replace(
                 VARSAYILAN_ODA_KURAL, ayak_izi_cekirdek=int(cek), min_duvar_payi=float(pay)
             )
+            if havza:
+                kural = replace(
+                    kural, havza_cekirdek=float(havza[0]), havza_birlesme=float(havza[1])
+                )
             _, etiket = oda_grafi(
                 duvar,
                 kapilar,

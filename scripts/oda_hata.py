@@ -36,10 +36,12 @@ SONUC = Path(__file__).resolve().parents[1] / "results"
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--varyant", default="duvar:yok:0:151:0")
+    ap.add_argument("--varyant", default="genis:pg:0:301:0.8:45:0.8")
     a = ap.parse_args()
-    ayak_k, oda_k, _, cek, pay = a.varyant.split(":")
+    ayak_k, oda_k, _, cek, pay, *havza = a.varyant.split(":")
     kural = replace(VARSAYILAN_ODA_KURAL, ayak_izi_cekirdek=int(cek), min_duvar_payi=float(pay))
+    if havza:
+        kural = replace(kural, havza_cekirdek=float(havza[0]), havza_birlesme=float(havza[1]))
     satirlar = []
     for o in ornekler(bolum="gelistirme"):
         if o.grup != "I-II":

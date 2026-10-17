@@ -93,3 +93,32 @@ def test_plani_coz_sentetik():
     assert len(s.kapilar) == 1 and len(s.pencereler) == 1
     assert sorted(n for n in s.graf.nodes if n != DIS) == [1, 2]
     assert [(u, v) for u, v in s.graf.edges()] == [(1, 2)]
+
+
+def _iki_oda_dar_gecit():
+    # İki 300x300 oda, aradaki duvarda kapatılmamış 80 px açıklık.
+    m = np.full((420, 760), 255, np.uint8)
+    m[50:350, 50:350] = 0
+    m[50:350, 410:710] = 0
+    m[160:240, 340:420] = 0
+    return m
+
+
+def test_havza_dar_gecidi_boler():
+    from floorplan_parser.oda import OdaKural, odalar
+
+    kapali = _iki_oda_dar_gecit()
+    _, baglanti = odalar(kapali, OdaKural(havza_cekirdek=0))
+    _, havza = odalar(kapali, OdaKural(havza_cekirdek=45))
+    assert len(baglanti) == 1
+    assert len(havza) == 2
+
+
+def test_havza_l_odayi_bolmez():
+    from floorplan_parser.oda import OdaKural, odalar
+
+    kapali = np.full((700, 700), 255, np.uint8)
+    kapali[50:350, 50:650] = 0  # yatay kol
+    kapali[50:650, 50:350] = 0  # dikey kol, 300 px geniş
+    _, havza = odalar(kapali, OdaKural(havza_cekirdek=45))
+    assert len(havza) == 1

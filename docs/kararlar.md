@@ -172,6 +172,12 @@ köşe boşluğunu orta çizgiye taşımak (kapı D 0.68); yarı açık kapı va
 merkezi (menteşe) duvar ucunda; boşluktan türetilen varsayımlar aramayı
 daraltıyor.
 
+**2026-10-18, yarı açık kapı ikinci deneme, reddedildi** ([olcumler
+§11](olcumler.md)): kısmi varsayımın yanlışları dış duvardaki pencere
+çerçevesi; kanat için "tek çizgi" testi ve pencere çizgili boşlukta kısmiyi
+kapatmak yanlışı 66'dan 40'a indirdi, ama uçtan uca oda F1 +0.006, kenar
+F1 0. Kısmi kapalı; seçenekler (`kismi_*`) kodda duruyor.
+
 **Sınırlar:** piksel eşikleri (40-200, 75) CVC-FP I-II ölçeğine bağlı;
 porte-fenêtre ve kanatlı pencere cevapta Window, sistemde yarıçapa göre
 ayrılıyor; yarı açık çizilmiş kapıların çoğu kaçıyor.
@@ -211,3 +217,10 @@ ve dolap çizgileri odaları bölüyor); köşe boşluklarını oda bölmede kap
 
 Kalan: kapısı kapanmayan birleşmeler (99 oda), kapı bulunamayan kenarlar
 (105). Duvarsız ayrımlar (91 oda) bu yöntemle bulunamaz.
+
+**2026-10-18, üçüncü tur: havza bölütleme** ([olcumler §11](olcumler.md)):
+bağlı bileşen yerine uzaklık dönüşümü + watershed (çekirdek eşiği 45 px,
+geniş geçitte birleşme 0.8). Tek bir kapanmamış açıklık artık iki odayı
+birleştiremiyor; oda F1 0.626 → 0.706, kenar F1 0.260 → 0.322. Eşik ve
+birleşme oranında plato (0.701-0.710). Kirişler ve ayak izi ayarları
+havzayla da gerekli (etkileşim tablosu). Süre plan başına +2.1 s.

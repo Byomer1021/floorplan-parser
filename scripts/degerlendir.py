@@ -15,10 +15,12 @@ Kullanım: uv run python scripts/degerlendir.py --bolum gelistirme
 import argparse
 import csv
 import time
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
 
+from floorplan_parser.aciklik import VARSAYILAN_ACIKLIK_KURAL
 from floorplan_parser.akis import plani_coz
 from floorplan_parser.cvcfp import maske, ornekler, yukle
 from floorplan_parser.degerlendirme import (
@@ -48,7 +50,18 @@ def cevap_kenarlari(c) -> dict:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--bolum", required=True, choices=["gelistirme", "test"])
+    ap.add_argument("--kismi", default="", help="ESIK:KANAT_YAN:PENCEREDE, ör. 0.9:0.15:0")
+    ap.add_argument("--etiket", default="")
     a = ap.parse_args()
+    aciklik_kural = VARSAYILAN_ACIKLIK_KURAL
+    if a.kismi:
+        e, y, pnc = a.kismi.split(":")
+        aciklik_kural = replace(
+            aciklik_kural,
+            kismi_esik=float(e),
+            kismi_kanat_yan=float(y),
+            kismi_pencerede=bool(int(pnc)),
+        )
 
     satirlar = []
     t_basla = time.perf_counter()
@@ -60,7 +73,7 @@ def main() -> None:
         if (ikile(g)[cevap_duvar > 0] > 0).mean() < 0.8:
             continue
         t0 = time.perf_counter()
-        s = plani_coz(g)
+        s = plani_coz(g, aciklik_kural=aciklik_kural)
         sure = time.perf_counter() - t0
 
         kapi_c, pencere_c, oda_c = c.sinif("Door"), c.sinif("Window"), c.sinif("Room")
@@ -111,7 +124,7 @@ def main() -> None:
         )
         print(o.ad, flush=True)
 
-    ad = f"degerlendir_{a.bolum}.csv"
+    ad = f"degerlendir_{a.bolum}{'_' + a.etiket if a.etiket else ''}.csv"
     with (SONUC / ad).open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=list(satirlar[0]))
         w.writeheader()

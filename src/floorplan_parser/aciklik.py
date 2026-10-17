@@ -35,6 +35,9 @@ class AciklikKural:
     # Yarı açık çizilmiş kapı: yay + kanat, yalnız kapı boyunda ve bu eşikle.
     # Kapalı (> 1): geliştirmede 0.85-0.95 F1'i düşürdü (olcumler §8).
     kismi_esik: float = 1.01
+    kismi_acilar: tuple[float, ...] = (30.0, 45.0, 60.0)
+    kismi_pencerede: bool = True  # False: pencere çizgisi taşıyan boşlukta kısmi yok
+    kismi_kanat_yan: float = 0.3  # kanadın 7 px yanında mürekkep payı en çok
     yay_tol: float = 3.0  # örnek noktanın mürekkebe en çok uzaklığı (px)
     pencere_kapsama: float = 0.8  # paralel çizginin boşluk boyunca doluluğu
     pencere_min_cizgi: int = 2
@@ -270,6 +273,8 @@ def kapi_dene(
     murekkep: np.ndarray,
     kismi_esik: float = 1.01,
     kismi_min_yaricap: float = 0.0,
+    kismi_acilar: tuple[float, ...] = KISMI_ACILAR,
+    kismi_kanat_yan: float = 0.3,
 ) -> Kapi | None:
     """Dört varsayımın (menteşe iki uçtan biri, açılma iki yandan biri) en
     iyisi; yarıçap ve menteşenin yüze göre yeri küçük aralıkta taranır.
@@ -300,12 +305,17 @@ def kapi_dene(
                         np.cos(_KISMI_TETA)[:, None] * u + np.sin(_KISMI_TETA)[:, None] * n
                     )
                     isabet = _isabet(murekkep, kismi_yay) if r >= kismi_min_yaricap else None
-                    for phi in KISMI_ACILAR if isabet is not None else ():
+                    for phi in kismi_acilar if isabet is not None else ():
                         p = math.radians(phi)
                         kisim = _KISMI_TETA <= p - np.radians(4)
-                        kanat = h + _KANAT[:, None] * r * (math.cos(p) * u + math.sin(p) * n)
+                        yon = math.cos(p) * u + math.sin(p) * n
+                        kanat = h + _KANAT[:, None] * r * yon
                         kismi = min(float(isabet[kisim].mean()), _pay(murekkep, kanat))
-                        if kismi >= kismi_esik:
+                        # Kanat tek çizgi olmalı: iki yanında, 7 px ötede mürekkep
+                        # yok. Pencere çerçevesinin sık paralel çizgileri bunu geçemez.
+                        dik = np.array([-yon[1], yon[0]])
+                        yan = max(_pay(murekkep, kanat + 7 * dik), _pay(murekkep, kanat - 7 * dik))
+                        if kismi >= kismi_esik and yan <= kismi_kanat_yan:
                             secenek.append((kismi, phi))
                     skor, aci = max(secenek)
                     if en_iyi is None or skor > en_iyi.skor:
@@ -430,7 +440,23 @@ def aciklik_bul(
         adaylar += kose_bosluklari(duvar_maske, kural)
     yaylar = []
     for bo in adaylar:
-        k = kapi_dene(bo, murekkep, kural.kismi_esik, kural.kapi_min_yaricap)
+        kismi_esik = kural.kismi_esik
+        # Pencere çerçevesi kısa kısmi yayla ve kanatla karışıyor (olcumler §11):
+        # paralel pencere çizgisi taşıyan boşlukta yalnız tam yay.
+        if (
+            kismi_esik <= 1.0
+            and not kural.kismi_pencerede
+            and pencere_dene(bo, ikili, kural) is not None
+        ):
+            kismi_esik = 1.01
+        k = kapi_dene(
+            bo,
+            murekkep,
+            kismi_esik,
+            kural.kapi_min_yaricap,
+            kural.kismi_acilar,
+            kural.kismi_kanat_yan,
+        )
         if k is not None and k.skor >= kural.yay_esik:
             yaylar.append(k)
     yaylar = kapi_bastir(yaylar)

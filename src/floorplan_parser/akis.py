@@ -10,6 +10,8 @@ import networkx as nx
 import numpy as np
 
 from floorplan_parser.aciklik import (
+    VARSAYILAN_ACIKLIK_KURAL,
+    AciklikKural,
     Kapi,
     Pencere,
     aciklik_bul,
@@ -33,7 +35,11 @@ class PlanSonucu:
     oda_etiket: np.ndarray  # 0 duvar/kiriş, DIS dış, 1.. oda
 
 
-def plani_coz(gri: np.ndarray, oda_kural: OdaKural = VARSAYILAN_ODA_KURAL) -> PlanSonucu:
+def plani_coz(
+    gri: np.ndarray,
+    oda_kural: OdaKural = VARSAYILAN_ODA_KURAL,
+    aciklik_kural: AciklikKural = VARSAYILAN_ACIKLIK_KURAL,
+) -> PlanSonucu:
     """Varsayılan akış. Oda bölmede kapı ve pencerelerin yanında parça
     uçlarından bulunan bütün boşluklar ve aynı doğrultudaki geniş açıklıklar
     (150-450 px) kapatılır; bina sınırı geniş açıklıklar kapanmış duvardan."""
@@ -41,7 +47,7 @@ def plani_coz(gri: np.ndarray, oda_kural: OdaKural = VARSAYILAN_ODA_KURAL) -> Pl
     kalin, kalin_p, ince_p = iki_olcekli_duvarlar(ikili)
     parcalar = kalin_p + ince_p
     duvar = np.maximum(kalin, parca_maskesi(ince_p, gri.shape))
-    kapilar, pencereler, _ = aciklik_bul(ikili, parcalar, duvar)
+    kapilar, pencereler, _ = aciklik_bul(ikili, parcalar, duvar, aciklik_kural)
     genis = genis_bosluklar(parcalar, duvar)
     graf, etiket = oda_grafi(
         duvar,
