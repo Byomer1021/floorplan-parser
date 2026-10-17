@@ -1,0 +1,28 @@
+# Ortam
+.venv/
+.env
+.cache/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Veri seti depoya girmez: lisansı ayrı, boyutu büyük. Nereden ve nasıl
+# indirildiği data/README.md'de.
+data/raw/
+data/processed/
+
+# Ara çıktılar koddan yeniden üretilir; rapora giren görseller docs/gorseller/
+results/ara/
+
+# Editor / OS
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini

@@ -1,0 +1,8 @@
+# Depoda her metin dosyasi LF; Windows'ta calisma kopyasi autocrlf'e gore.
+* text=auto
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.tif binary
+*.pdf binary

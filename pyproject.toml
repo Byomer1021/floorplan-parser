@@ -1,0 +1,36 @@
+[project]
+name = "floorplan-parser"
+version = "0.1.0"
+description = "Raster kat planlarından duvar, kapı ve pencereyi öğrenilmiş model kullanmadan, klasik görüntü işlemeyle çıkaran kural tabanlı çözümleyici"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+# Öğrenilmiş model yok (kararlar K-002): torch, tensorflow, ultralytics vb.
+# buraya girmez; tests/test_ortam.py uv.lock'ta bunları arar.
+dependencies = [
+    # klasik görüntü işleme: eşikleme, morfoloji, Hough, şablon eşleme
+    "opencv-python>=4.10",
+    "scikit-image>=0.24",
+    "scipy>=1.13",
+    "numpy>=1.26",
+    # çıktı: duvar/oda grafı ve görselleştirme
+    "networkx>=3.3",
+    "matplotlib>=3.9",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+    "ipykernel>=6.29",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.0,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+src = ["src"]
