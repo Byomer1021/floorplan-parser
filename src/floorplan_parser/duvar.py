@@ -24,6 +24,8 @@ from skimage.morphology import skeletonize
 
 from floorplan_parser.onisleme import ac
 
+_ALT_PIKSEL = 4
+
 
 @dataclass(frozen=True)
 class Parca:
@@ -196,16 +198,21 @@ def kavsaklara_cek(
 ) -> np.ndarray:
     """Başka duvara yakın ucu iki orta çizginin kesişimine taşır.
 
-    Yakınlık: uç, kesişim noktasına iki kalınlıktan büyüğü kadar yakın ve
-    kesişim öbür parçanın üzerinde (uçlarından yarım kalınlık taşmaya izinle).
+    Yakınlık: uç, kesişim noktasına iki kalınlıktan büyüğü kadar yakın;
+    kesişim öbür parçanın üzerinde (uçlarından yarım kalınlık taşmaya izinle)
+    ve ucun gerisinde en çok öbür duvarın yarım kalınlığı kadar. Daha
+    gerideki kesişim parçanın ortasındaki bir T-kavşağıdır: ucu oraya çekmek
+    duvarı kısaltır (kapıya bakan serbest uç 20-60 px geri çekiliyordu).
     ``oynar`` verilirse yalnız o parçaların uçları taşınır; hedef hepsi.
     """
     yeni = parcalar.copy()
     for i, p in enumerate(parcalar):
         if oynar is not None and i not in oynar:
             continue
+        p_uzunluk = max(np.linalg.norm(p[2:] - p[:2]), 1e-9)
         for uc in (0, 1):
             e = p[2 * uc : 2 * uc + 2]
+            disari = (p[2:] - p[:2]) / p_uzunluk * (1 if uc else -1)
             en_iyi, en_iyi_uzaklik = None, math.inf
             for j, q in enumerate(parcalar):
                 if i == j:
@@ -222,9 +229,11 @@ def kavsaklara_cek(
                 q_uzunluk = np.linalg.norm(q[2:] - q[:2])
                 t = (x - q[:2]) @ (q[2:] - q[:2]) / max(q_uzunluk, 1e-9)
                 tasma = kalinliklar[j] / 2 + 1
+                ileri = (x - e) @ disari  # kesişim ucun ötesinde (+) ya da gerisinde (-)
                 if (
                     uzaklik <= yaricap
                     and -tasma <= t <= q_uzunluk + tasma
+                    and ileri >= -(kalinliklar[j] / 2 + 2)
                     and uzaklik < en_iyi_uzaklik
                 ):
                     en_iyi, en_iyi_uzaklik = x, uzaklik
@@ -315,6 +324,24 @@ def ince_secer(oz: dict, kural: InceKural) -> bool:
         and oz["kalinlik_degisim"] <= kural.max_degisim
         and oz["paralel"] <= kural.max_paralel
     )
+
+
+def dortgen(p: Parca) -> np.ndarray:
+    """Parçanın ``kapsam`` uçları arasında kalınlığı kadar dikdörtgeni, (4, 2).
+
+    Köşeler sınır piksellerinin merkezinde: ``cv2.fillConvexPoly`` kenar
+    piksellerini de boyar, yarım genişlik (kalınlık - 1) / 2.
+    """
+    x1, y1, x2, y2 = p.kapsam or (p.x1, p.y1, p.x2, p.y2)
+    a, b = np.array([x1, y1]), np.array([x2, y2])
+    d = (b - a) / max(np.linalg.norm(b - a), 1e-9)
+    n = np.array([-d[1], d[0]]) * (p.kalinlik - 1) / 2
+    return np.array([a + n, b + n, b - n, a - n])
+
+
+def dortgen_ciz(goruntu: np.ndarray, p: Parca, deger: int) -> None:
+    kose = np.round(dortgen(p) * (1 << _ALT_PIKSEL)).astype(np.int32)
+    cv2.fillConvexPoly(goruntu, kose, deger, cv2.LINE_8, _ALT_PIKSEL)
 
 
 def ince_aday_maskesi(

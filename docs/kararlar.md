@@ -138,5 +138,40 @@ IoU 0.81 → 0.880; tavana oran 0.977 ([olcumler §6](olcumler.md)). Eşikler
 aynı geliştirme planlarında seçildi; test bölümünde bir kez ölçülecek.
 
 **Bilinen yanlış:** tek başına duran, uzun, düz, duvar kalınlığındaki çizgi
-(merdiven taban çizgisi) duvar sayılıyor. (b) bunu eler; şimdilik alanca
-etkisi küçük (adaylar içinde kesinlik 0.998).
+(merdiven taban çizgisi, döner merdivenin dikmesi) duvar sayılıyor.
+
+**2026-10-17, (b) denendi, reddedildi.** Beş bağlantı/temas kuralı ve bir
+basamak dizisi kuralı denendi; her biri en çok 2 yanlışı elerken en az 12,
+çoğu 38-490 gerçek duvarı kaybettirdi ([olcumler §7](olcumler.md)). Gerçek bölme
+duvarların ~%5'i hiçbir duvara değmiyor. Yanlış alan ince duvar alanının
+%0.2'si; kabul edildi, test bunu belgeliyor.
+
+## K-008: Kapı ve pencere: boşluk + yay testi, geçerli (2026-10-17)
+
+`aciklik.aciklik_bul`:
+
+1. Boşluk adayları: parça uçlarından ve duvar maskesinin ~90° dışbükey
+   köşelerinden, duvar yüzü boyunca ışın; ışın duvardan çıkıp 40-200 px
+   sonra yeniden duvara giriyorsa arası boşluk. Kavşaktaki uçta karşıdaki
+   duvar aynı doğrultuda olmalı (T-kavşağından odanın karşısına boşluk
+   açılmasın).
+2. Yay: dört varsayım (menteşe iki uçtan biri, açılma iki yandan biri),
+   menteşenin yüze göre yeri ve yarıçap küçük aralıkta taranır; çeyrek yay
+   örneklerinin ince mürekkebe yakın payı. Bilinen geometrili şablon eşleme.
+3. Pay ≥ 0.8 ve yarıçap ≥ 75 px kapı; yarıçap < 75 kanatlı pencere.
+   Örtüşen yaylardan skoru yüksek kalır.
+4. Yay olmayan parça boşlukları: duvar bandında ≥ 2 paralel ince çizgi
+   pencere.
+
+Geliştirmede kapı F1 0.853 (K 0.972, D 0.760), pencere F1 0.670
+([olcumler §8](olcumler.md)).
+
+**Denenip bırakılan:** menteşeyi yalnız dışbükey köşede aramak (F1 0.37);
+köşe boşluğunu orta çizgiye taşımak (kapı D 0.68); yarı açık kapı varsayımı
+(F1 0.82-0.84). Hough çember dönüşümü denenmedi: kapı yayı çeyrek çember ve
+merkezi (menteşe) duvar ucunda; boşluktan türetilen varsayımlar aramayı
+daraltıyor.
+
+**Sınırlar:** piksel eşikleri (40-200, 75) CVC-FP I-II ölçeğine bağlı;
+porte-fenêtre ve kanatlı pencere cevapta Window, sistemde yarıçapa göre
+ayrılıyor; yarı açık çizilmiş kapıların çoğu kaçıyor.

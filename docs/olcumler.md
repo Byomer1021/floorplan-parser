@@ -248,3 +248,85 @@ orta çizgisine çekiliyor (49.4; cevap 49.5).
   mürekkepten biraz geniş) ve bir kısa duvar parçası.
 - Maske ile parça IoU arası 0.046: ince parçalar kalın duvara 1 px kala
   bitiyor; kısa ve dikdörtgen olmayan parçalar kayboluyor. Ayrıştırılmadı.
+
+## §7 Bağlantı kuralları: merdiven çizgisi elenemedi (2026-10-17)
+
+K-007'de kalan iki yanlış (geliştirmede 2751 px, ikisi de merdivenin parçası:
+IIa_BK0701'de taban çizgisi, Ic_MT0601'de döner merdivenin dikmesi) için
+denenen kurallar. Hepsi yerel kuraldan geçen 829 ince parça üzerinde, alanca.
+
+| kural | elenen yanlış | kaybedilen gerçek duvar | duyarlılık |
+|---|---|---|---|
+| yalnız yerel kural | — | — | 0.987 |
+| kalın duvara graf (temas + aynı doğruda 150 px) | 2 | 38 parça, 43 189 px | 0.952 |
+| ışınla graf (uçtan 150 px) | 0 | 106 parça, 107 321 px | 0.900 |
+| ışınla iki uç | 2 | 490 parça, 661 903 px | 0.448 |
+| en az bir uç kavşakta | 2 | 65 parça, 84 679 px | — |
+| temas, iki yönlü (uç gövdeye ya da gövde uca) | 2 | 39 parça, 46 742 px | — |
+| düzenli basamak dizisi (≥ 5 kesişme, aralık CV < 0.1) | 1 (dikmede kesişme yok) | 12 parça | — |
+
+- Gerçek bölme duvarların ~%5'i hiçbir duvara değmiyor: iki kapı arasında
+  ya da ince çizgiyle çizilmiş dolapların yanında duruyor. Topolojik kural
+  bunları merdiven çizgisinden ayıramıyor.
+- Merdiveni sınırlayan gerçek duvarlarda da basamaklar düzenli aralıkla
+  bitiyor (12 duvar); basamak işareti de ayırmıyor.
+- Işın kuralının ilk sürümünde hata vardı: etiket görüntüsünde kesişen
+  dikdörtgenler birbirinin üstüne yazılıyor, kavşaktan çıkan ışın komşuyu
+  görmüyordu. Sonuç tablodaki gibi kötü; düzeltilmiş hali denenmedi, çünkü
+  temas kuralı (aynı bilgiyi geometriyle veren) da kaybettiriyor.
+
+Sonuç: bağlantı kuralı yok. Yanlış alan, ince duvar alanının %0.2'si.
+Test: `test_bilinen_sinir_serbest_cizgi_duvar_sayilir`.
+
+## §8 Kapı ve pencere (2026-10-17)
+
+`aciklik.py`, `scripts/aciklik_deney.py`. Geliştirme, I-II dolu duvarlı 62
+plan; cevapta 555 kapı, 574 pencere. Eşleme: poligon IoU ≥ 0.5, bire bir.
+Kapı poligonu açılma alanı (menteşe + çeyrek yay), pencere poligonu boşluk
+dikdörtgeni ya da kanatlı pencerede açılma alanı.
+
+**Sürümler:**
+
+| sürüm | kapı D/F/E | kapı K / D / F1 | pencere D/F/E | pencere F1 |
+|---|---|---|---|---|
+| 1. parça boşlukları, yay ≥ 0.6 (ışın hatalı) | 391/135/164 | 0.743 / 0.705 / 0.723 | 308/94/266 | 0.631 |
+| 1a. ışın yalnız serbest uçlardan | 350/108/205 | 0.764 / 0.631 / 0.691 | 307/86/267 | 0.635 |
+| 2. boşluk = ışının boş aralığı, kavşak ucunda aynı doğrultu | 345/91/210 | 0.791 / 0.622 / 0.696 | 280/70/294 | 0.606 |
+| köşede yay merkezi (menteşe dışbükey köşede) | 240/514/315 | 0.318 / 0.432 / 0.367 | 243/8/331 | 0.589 |
+| 2 + raster köşelerinden boşluk, yay ≥ 0.6 | 443/283/112 | 0.610 / 0.798 / 0.692 | 219/55/355 | 0.517 |
+| **3. + yay ≥ 0.8, kapı yarıçapı ≥ 75, küçük yay kanatlı pencere** | **422/12/133** | **0.972 / 0.760 / 0.853** | **335/91/239** | **0.670** |
+| 4. köşe boşluğunu orta çizgiye taşı, pencereyi her boşlukta dene | 376/8/179 | 0.979 / 0.677 / 0.801 | 325/204/249 | 0.589 |
+| 3 + yarı açık kapı (yay + kanat), eşik 0.95 | 450/73/105 | 0.860 / 0.811 / 0.835 | 296/89/278 | 0.617 |
+| 3 + yarı açık kapı, eşik 0.90 | 452/93/103 | 0.829 / 0.814 / 0.822 | 295/89/279 | 0.616 |
+
+Seçilen: 3. Eşikler (0.8, 75 px) bu planlarda seçildi; test bölümünde
+bir kez ölçülecek.
+
+- **Menteşe her zaman dışbükey köşede değil:** kapı boşluğu bir duvar ucu
+  ile dik duvarın düz yüzü arasında olabilir ve menteşe o yüzde durur.
+  Köşeler yay merkezi olarak değil, boşluk aramanın başlangıcı olarak işe
+  yarıyor.
+- **Kanatlı pencere:** yay çizilmiş küçük pencereler (WC, banyo dış duvarı)
+  cevapta Window. Yarıçap, %5 / medyan / %95: kapı 89 / 91 / 102 px,
+  kanatlı pencere 60 / 73 / 86 px. Sınır 75 px; cevaptaki en küçük kapı
+  77 px (§3). Bu piksel eşiği CVC-FP I-II'nin tarama ölçeğine bağlı.
+- Yay skoru eşiğe yakın yığılıyor: tam yay örneklemesi 24 örnekten 2°
+  adımlı 38 örneğe çıkınca fazla kapı 12'den 116'ya çıktı. Eşikler mevcut
+  örneklemeyle geçerli.
+- Kavşağa çekmede düzeltilen hata: kesişim ucun gerisindeyse (parçanın
+  ortasındaki T-kavşağı) uç oraya çekilip duvar 20-60 px kısalıyordu.
+  Duvar IoU'su değişmedi (§6 yeniden ölçüldü: 0.926 / 0.880).
+
+**Sürüm 3'ün kalan hataları** (`scripts/aciklik_hata.py`):
+
+| eksik kapı (133) | | fazla kapı (12) | |
+|---|---|---|---|
+| yay zayıf (aday var, en iyi pay < 0.8) | 96 | cevapta pencere | 4 |
+| aday yok | 33 | geometri (0.1 ≤ IoU < 0.5) | 3 |
+| geometri | 3 | boşta | 5 |
+| diğer | 1 | | |
+
+- Cevaptaki 555 kapının 522'sinde (%94) parça ya da köşe boşluğu adayı var.
+- "Yay zayıf" 96 kapının en iyi payı %10 / 50 / 90: 0.33 / 0.58 / 0.75.
+  Görüntüyle bakılan 8 örneğin çoğu yarı açık çizilmiş kapı (kanat 30-60°,
+  yay o açıya kadar); denenen kısmi varsayım net kazanç vermedi (tablo).

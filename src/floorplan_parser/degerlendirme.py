@@ -6,7 +6,7 @@ from collections.abc import Sequence
 import cv2
 import numpy as np
 
-from floorplan_parser.duvar import Parca, aci_farki
+from floorplan_parser.duvar import Parca, aci_farki, dortgen_ciz
 
 
 def iou(a: np.ndarray, b: np.ndarray) -> float:
@@ -15,24 +15,13 @@ def iou(a: np.ndarray, b: np.ndarray) -> float:
     return float((a & b).sum() / birlesim) if birlesim else 1.0
 
 
-_ALT_PIKSEL = 4
-
-
 def parca_maskesi(parcalar: Sequence[Parca], boyut: tuple[int, int]) -> np.ndarray:
     """Her parçayı ``kapsam`` uçları arasında kalınlığı kadar dikdörtgen çizer
-    (kapsam yoksa graf uçları). Köşeyi dolduran, öbür duvarın kapsamı."""
+    (kapsam yoksa graf uçları). Köşeyi dolduran, öbür duvarın kapsamı.
+    Tek tek: fillPoly birden çok poligonu tek-çift kuralıyla doldurur."""
     m = np.zeros(boyut, np.uint8)
     for p in parcalar:
-        x1, y1, x2, y2 = p.kapsam or (p.x1, p.y1, p.x2, p.y2)
-        a, b = np.array([x1, y1]), np.array([x2, y2])
-        d = (b - a) / max(np.linalg.norm(b - a), 1e-9)
-        # fillPoly kenar piksellerini de boyar: köşeler sınır piksellerinin
-        # merkezinde, yani yarım genişlik (kalınlık - 1) / 2.
-        n = np.array([-d[1], d[0]]) * (p.kalinlik - 1) / 2
-        kose = np.round(np.array([a + n, b + n, b - n, a - n]) * (1 << _ALT_PIKSEL))
-        # Tek tek: fillPoly birden çok poligonu tek-çift kuralıyla doldurur,
-        # köşede üst üste binen iki duvar delik olur.
-        cv2.fillConvexPoly(m, kose.astype(np.int32), 255, cv2.LINE_8, _ALT_PIKSEL)
+        dortgen_ciz(m, p, 255)
     return m
 
 
@@ -64,3 +53,40 @@ def parca_eslestir(
             kullanildi.add(en_iyi)
             dogru += 1
     return dogru, len(tahmin) - dogru, len(cevap) - dogru
+
+
+def poligon_iou(p: np.ndarray, q: np.ndarray) -> float:
+    """İki poligonun IoU'su, ortak sınır kutusunda 1/4 piksel raster ile."""
+    hepsi = np.vstack([p, q])
+    x0, y0 = np.floor(hepsi.min(0)) - 1
+    x1, y1 = np.ceil(hepsi.max(0)) + 1
+    olcek = 4
+    boyut = (int((y1 - y0) * olcek) + 1, int((x1 - x0) * olcek) + 1)
+    a, b = np.zeros(boyut, np.uint8), np.zeros(boyut, np.uint8)
+    cv2.fillPoly(a, [np.round((p - [x0, y0]) * olcek).astype(np.int32)], 1)
+    cv2.fillPoly(b, [np.round((q - [x0, y0]) * olcek).astype(np.int32)], 1)
+    birlesim = (a | b).sum()
+    return float((a & b).sum() / birlesim) if birlesim else 0.0
+
+
+def poligon_eslestir(
+    tahmin: Sequence[np.ndarray], cevap: Sequence[np.ndarray], esik: float = 0.5
+) -> tuple[int, int, int]:
+    """IoU'su ``esik``'ten büyük çiftleri en iyiden başlayarak bire bir eşler.
+    (doğru, fazla, eksik)."""
+    adaylar = []
+    for i, t in enumerate(tahmin):
+        tk = (t.min(0), t.max(0))
+        for j, c in enumerate(cevap):
+            ck = (c.min(0), c.max(0))
+            if (tk[0] > ck[1]).any() or (ck[0] > tk[1]).any():
+                continue
+            v = poligon_iou(t, c)
+            if v >= esik:
+                adaylar.append((v, i, j))
+    ti, cj = set(), set()
+    for _, i, j in sorted(adaylar, reverse=True):
+        if i not in ti and j not in cj:
+            ti.add(i)
+            cj.add(j)
+    return len(ti), len(tahmin) - len(ti), len(cevap) - len(ti)

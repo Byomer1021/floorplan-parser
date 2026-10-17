@@ -115,3 +115,13 @@ def test_merdiven_paralel_komsu_sayisi():
     basamak = [x for x in adaylar if abs(x.y1 - x.y2) < 1]
     assert len(basamak) == 6
     assert min(ince_ozellikler(x, aday, adaylar, 60)["paralel"] for x in basamak) >= 3
+
+
+def test_bilinen_sinir_serbest_cizgi_duvar_sayilir():
+    # Hiçbir duvara değmeyen, bölme duvar kalınlığında uzun tek çizgi (CVC-FP'de
+    # merdiven taban çizgisi) duvar sayılıyor. Elemek için denenen kurallar
+    # geliştirmede en çok 2 yanlışı elerken en az 12 gerçek duvarı kaybettirdi
+    # (docs/olcumler.md §7). Davranış değişirse bu test haber verir.
+    p = plan_ciz(duvar=24, ic_duvar=8, merdiven=True, serbest_cizgi=True)
+    _, kalin_p, ince_p = iki_olcekli_duvarlar(delik_doldur(ikile(p.goruntu), 4))
+    assert parca_eslestir(kalin_p + ince_p, _cevap(p), uc_tol=2) == (7, 1, 0)

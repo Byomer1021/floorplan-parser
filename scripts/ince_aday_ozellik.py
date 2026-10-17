@@ -7,6 +7,7 @@ paralel komşu) ve incelemeye ek olarak:
 
 - uc_kalin_1/2: iki ucun en yakın kalın duvar pikseline uzaklığı (küçük önce)
 - duvar_payi: parçanın dikdörtgeninin cevaptaki duvarla örtüşen payı (etiket)
+- secildi: yerel kurallardan geçti (``InceKural``)
 
 Yalnız geliştirme, yalnız dolu duvarlı I-II planları (cevaptaki duvarın
 Otsu dolgusu ≥ 0.8; stil seçimi değerlendirme içindir, sistem stili bilmez).
@@ -23,7 +24,13 @@ import numpy as np
 
 from floorplan_parser.cvcfp import maske, ornekler, yukle
 from floorplan_parser.degerlendirme import parca_maskesi
-from floorplan_parser.duvar import duvarlari_bul, ince_aday_maskesi, ince_ozellikler
+from floorplan_parser.duvar import (
+    InceKural,
+    duvarlari_bul,
+    ince_aday_maskesi,
+    ince_ozellikler,
+    ince_secer,
+)
 from floorplan_parser.onisleme import delik_doldur, ikile
 
 SONUC = Path(__file__).resolve().parents[1] / "results"
@@ -50,8 +57,11 @@ def main() -> None:
             (kalin == 0).astype(np.uint8), cv2.DIST_L2, cv2.DIST_MASK_PRECISE
         )
         h, w = g.shape
-        for p in parcalar:
-            oz = ince_ozellikler(p, aday, parcalar, 60)
+        kural = InceKural()
+        ozler = [ince_ozellikler(p, aday, parcalar, kural.paralel_uzaklik) for p in parcalar]
+        secilen = [p for p, oz in zip(parcalar, ozler) if ince_secer(oz, kural)]
+        secilen_id = {id(p) for p in secilen}
+        for p, oz in zip(parcalar, ozler):
             uc = sorted(
                 float(kalin_uzaklik[min(max(round(y), 0), h - 1), min(max(round(x), 0), w - 1)])
                 for x, y in (p.kapsam[:2], p.kapsam[2:])
@@ -65,6 +75,7 @@ def main() -> None:
                     "uc_kalin_2": round(uc[1], 1),
                     "alan": int(pm.sum()),
                     "duvar_payi": round(float(cevap[pm].mean()) if pm.any() else 0.0, 3),
+                    "secildi": int(id(p) in secilen_id),
                 }
             )
         print(f"{o.ad:24} {len(parcalar)} ince parça", flush=True)

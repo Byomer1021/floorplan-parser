@@ -83,12 +83,15 @@ def plan_ciz(
     tohum: int = 0,
     ic_duvar: int | None = None,
     merdiven: bool = False,
+    serbest_cizgi: bool = False,
 ) -> SentetikPlan:
     """600x400 plan. ``gurultu``: her pikselin rastgele ters çevrilme olasılığı.
 
     ``ic_duvar``: iç (bölme) duvarın kalınlığı, verilmezse ``duvar``.
     ``merdiven``: oda 2'ye altı paralel basamak çizgisi, iç duvar
     kalınlığında. Duvar değil; tek açma çekirdeği bölme duvarla ayıramaz.
+    ``serbest_cizgi``: oda 1'e hiçbir duvara değmeyen, iç duvar kalınlığında
+    uzun tek çizgi (merdiven taban çizgisi gibi). Duvar değil.
     """
     h = duvar // 2
     ic = ic_duvar or duvar
@@ -115,6 +118,8 @@ def plan_ciz(
     if merdiven:
         for y in range(110, 230, 20):
             goruntu[y - ic // 2 : y + ic // 2, 420:500] = MUREKKEP
+    if serbest_cizgi:
+        goruntu[260 - ic // 2 : 260 + ic // 2, 100:240] = MUREKKEP
 
     # Kapı: açık kanat (menteşeden sağa) ve kapalı konumdan açığa çeyrek yay.
     cv2.line(goruntu, (mx, my), (mx + r, my), MUREKKEP, ince)
