@@ -51,6 +51,25 @@ def kapa(ikili: np.ndarray, boyut: int) -> np.ndarray:
     return cv2.morphologyEx(ikili, cv2.MORPH_CLOSE, _kare(boyut))
 
 
+def delik_doldur(ikili: np.ndarray, max_alan: int) -> np.ndarray:
+    """Dört yanı mürekkeple çevrili, alanı en fazla ``max_alan`` piksel olan
+    kâğıt bölgelerini doldurur (duvar içindeki tarama gürültüsü).
+
+    Yapısal kapalı bölgeler büyük kalmalı: odalar, kapı yayının içi ve
+    pencerenin paralel çizgileri arasındaki şerit (sentetik planda 100+).
+    """
+    kagit = (ikili == 0).astype(np.uint8)
+    _, etiket, istat, _ = cv2.connectedComponentsWithStats(kagit, connectivity=4)
+    h, w = ikili.shape
+    x, y, gen, yuk, alan = istat.T
+    kenara_deger = (x == 0) | (y == 0) | (x + gen == w) | (y + yuk == h)
+    doldur = (alan <= max_alan) & ~kenara_deger
+    doldur[0] = False  # 0 etiketi mürekkep
+    sonuc = ikili.copy()
+    sonuc[doldur[etiket]] = 255
+    return sonuc
+
+
 def kalin_ayir(ikili: np.ndarray, kalinlik: int) -> tuple[np.ndarray, np.ndarray]:
     """``kalinlik`` piksellik kareyle açma: (kalın, ince).
 
@@ -60,3 +79,8 @@ def kalin_ayir(ikili: np.ndarray, kalinlik: int) -> tuple[np.ndarray, np.ndarray
     """
     kalin = ac(ikili, kalinlik)
     return kalin, cv2.subtract(ikili, kalin)
+
+
+def duvar_adayi(gri: np.ndarray, kalinlik: int, max_delik: int = 4) -> np.ndarray:
+    """Varsayılan akış: ikile → küçük delikleri doldur → kalın kısım (K-004)."""
+    return kalin_ayir(delik_doldur(ikile(gri), max_delik), kalinlik)[0]

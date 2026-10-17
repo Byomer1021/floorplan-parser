@@ -4,15 +4,19 @@ Gerçek planda doğru cevabı elle işaretlemek gerekir; burada çizen kod cevab
 da verir. Her adımın testi önce burada geçmeli. Bilinen sınır: duvarlar yalnız
 yatay/dikey, çizgiler kenar yumuşatmasız, tek çizim stili.
 
-Yerleşim (varsayılan, piksel)::
+Yerleşim (varsayılan, piksel, orta çizgiler)::
 
-    (45,45) ───────────────────────────── (555,45)
+    (50,50) ──────────────(300,50)────────── (550,50)
       │              │                       │
       │     oda 1    │        oda 2          │
       │              ╰╮ kapı (300,180-240)   │
       │              │                       │
-      └──═══──────────────────────────────── ┘
-         pencere (100-200, 350)
+    (50,350)─═══─────(300,350)────────────── (550,350)
+         pencere (100-200)
+
+Duvar cevabı en uzun düz parçalar (T-kavşakta bölünmez; bölmek graf adımının
+işi). Başka duvara dayanan uç, orta çizgilerin kesişme noktası; kapı/pencere
+boşluğuna bakan uç, boşluğun kenarı.
 """
 
 from dataclasses import dataclass, field
@@ -62,11 +66,12 @@ class SentetikPlan:
 
 
 def _duvar_ciz(maske: np.ndarray, d: Duvar) -> None:
+    # Uçlar yarım kalınlık uzatılır ki köşeler dolsun; boşluklar sonra oyulur.
     h = d.kalinlik // 2
     if d.y1 == d.y2:
-        maske[d.y1 - h : d.y1 + h, min(d.x1, d.x2) : max(d.x1, d.x2)] = 255
+        maske[d.y1 - h : d.y1 + h, min(d.x1, d.x2) - h : max(d.x1, d.x2) + h] = 255
     elif d.x1 == d.x2:
-        maske[min(d.y1, d.y2) : max(d.y1, d.y2), d.x1 - h : d.x1 + h] = 255
+        maske[min(d.y1, d.y2) - h : max(d.y1, d.y2) + h, d.x1 - h : d.x1 + h] = 255
     else:
         raise ValueError("yalnız yatay/dikey duvar")
 
@@ -76,24 +81,26 @@ def plan_ciz(duvar: int = 10, ince: int = 2, gurultu: float = 0.0, tohum: int = 
     h = duvar // 2
     kapi = Kapi(mentese=(300, 180), genislik=60)
     pencere = Pencere(x1=100, x2=200, y=350)
+    mx, my = kapi.mentese
+    r = kapi.genislik
     duvarlar = [
-        Duvar(45, 50, 555, 50, duvar),  # üst, köşeleri de kaplar
+        Duvar(50, 50, 550, 50, duvar),  # üst
         Duvar(50, 50, 50, 350, duvar),  # sol
         Duvar(550, 50, 550, 350, duvar),  # sağ
-        Duvar(45, 350, pencere.x1, 350, duvar),  # alt, pencereye kadar
-        Duvar(pencere.x2, 350, 555, 350, duvar),  # alt, pencereden sonra
-        Duvar(300, 50 + h, 300, kapi.mentese[1], duvar),  # iç duvar, kapıya kadar
-        Duvar(300, kapi.mentese[1] + kapi.genislik, 300, 350 - h, duvar),  # kapıdan sonra
+        Duvar(50, 350, pencere.x1, 350, duvar),  # alt, pencereye kadar
+        Duvar(pencere.x2, 350, 550, 350, duvar),  # alt, pencereden sonra
+        Duvar(300, 50, 300, my, duvar),  # iç duvar, kapıya kadar
+        Duvar(300, my + r, 300, 350, duvar),  # iç duvar, kapıdan sonra
     ]
 
     maske = np.zeros((400, 600), np.uint8)
     for d in duvarlar:
         _duvar_ciz(maske, d)
+    maske[my : my + r, mx - h : mx + h] = 0
+    maske[pencere.y - h : pencere.y + h, pencere.x1 : pencere.x2] = 0
     goruntu = np.where(maske > 0, MUREKKEP, KAGIT).astype(np.uint8)
 
     # Kapı: açık kanat (menteşeden sağa) ve kapalı konumdan açığa çeyrek yay.
-    mx, my = kapi.mentese
-    r = kapi.genislik
     cv2.line(goruntu, (mx, my), (mx + r, my), MUREKKEP, ince)
     cv2.ellipse(goruntu, (mx, my), (r, r), 0, 0, 90, MUREKKEP, ince)
 

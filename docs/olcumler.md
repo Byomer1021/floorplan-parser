@@ -51,3 +51,126 @@ Duvar maskesi 17300 piksel. Gürültü: her piksel %1 olasılıkla ters.
   kalan 0-2 piksel ince çizgiye yapışık, çizimden 2 pikselden uzakta 0.
 
 Karar: [K-004](kararlar.md).
+
+## §3 CVC-FP envanteri (2026-10-17)
+
+`scripts/cvcfp_envanter.py` → `results/cvcfp_envanter.csv`. 122 plan, 20 s.
+Cevap istatistiği; sistem çıktısı yok, bu yüzden 122 planın hepsine bakıldı.
+
+| grup | n | genişlik (px) | duvar | kapı | pencere | oda | duvar kalınlığı (px) | duvar dolgusu |
+|---|---|---|---|---|---|---|---|---|
+| I-II | 90 | 2479-3508 | 40.5 [19-85] | 9 [3-20] | 10 [4-18] | 10 [5-18] | 22.6 [6.5-34.3] | 0.950 [0.254-0.986] |
+| sayi | 10 | 1027-2218 | 60.5 [24-71] | 10 [4-13] | 10 [2-14] | 11 [5-13] | 10.1 [5.2-18] | 0.559 [0.520-0.573] |
+| image | 18 | 5671 | 79 [66-93] | 10.5 [8-13] | 12.5 [12-13] | 12.5 [10-15] | 24.9 [22.6-27.4] | 0.291 [0.233-0.343] |
+| p | 4 | 2550 | 35 [27-43] | 6.5 [4-9] | 5.5 [3-8] | 6.5 [4-9] | 22.5 [20-23.9] | 0.339 [0.325-0.355] |
+
+Plan başına medyan [en az-en çok]. Kalınlık: duvar poligonu başına
+2·alan/çevre, plan medyanı. Dolgu: cevaptaki duvar piksellerinin Otsu ile
+mürekkep çıkan payı.
+
+- **Dolgu stili ayırıyor.** I-II'de 86/90 plan ≥ 0.8 (dolu siyah duvar);
+  4'ü 0.25-0.34 (içi boş: IIa_A01001, IIa_DL0701, IIa_GL0401, IIa_GT0602).
+  Diğer üç grup 0.23-0.57: taralı ya da çift çizgi. Kalın/ince ayrımı yalnız
+  dolu duvarda anlamlı: veri setinin 86/122'si (%70).
+- Dolu planlarda plan medyan kalınlığı %5/50/95: 12.2 / 22.6 / 32.5 px.
+- **Yöntemin tavanı:** mürekkep seçen bir yöntemin IoU'su en fazla dolgu
+  oranı kadar olabilir (cevabın mürekkep olmayan kısmı bulunamaz). Dolu
+  planlarda medyan 0.95.
+
+**Duvar başına kalınlık** (dolu planlar, geliştirme, 2543 duvar).
+2·alan/çevre kısa duvarda kalınlığı düşük gösterir (kare parça 25x25 →
+12.5), alt aralıklar kısa parçalarla şişkin:
+
+| kalınlık (px) | duvar | alan payı |
+|---|---|---|
+| < 6 | 5.2% | 1.0% |
+| 6-9 | 19.5% | 5.0% |
+| 9-12 | 9.6% | 3.6% |
+| 12-16 | 4.7% | 1.3% |
+| 16-24 | 16.8% | 13.8% |
+| 24-40 | 41.6% | 65.0% |
+| ≥ 40 | 2.4% | 10.2% |
+
+**Kapı boyu** (geliştirme, kapı poligonunun en küçük döndürülmüş
+dikdörtgeninin uzun kenarı, px, %1 / 5 / 50 / 95): I-II 91 / 94 / 102 /
+146, en küçük 77; sayi 43 / 44 / 67 / 105; image 192 / 192 / 197 / 246;
+p 137 / 142 / 152 / 177. `max_bosluk` için üst sınır.
+
+**Cevap maskesi hatası (düzeltildi):** `cv2.fillPoly` birden çok poligonu
+tek-çift kuralıyla dolduruyor; cevapta duvarlar köşede üst üste bindiği için
+üst üste binen yerler delik çıkıyordu. 122 planda duvar piksellerinin
+%1.0'ı (45 968 878 yerine 45 499 667). Poligonlar artık tek tek çiziliyor;
+envanter düzeltmeden sonra yeniden çalıştırıldı, dolgu en çok 0.006 değişti.
+
+## §4 Duvar parçaları, sentetik plan (2026-10-17)
+
+`duvar.duvarlari_bul` (iskelet + olasılıksal Hough, K-006), varsayılanlar:
+`max_bosluk` 20, Hough eşiği 10, en kısa 15 px. Eşleme: açı ≤ 5°, iki uç
+≤ 2 px. Cevap 7 duvar (en uzun düz parçalar, köşe ucu orta çizgi kesişimi).
+
+| durum | doğru / fazla / eksik | kalınlık | parça maskesi IoU |
+|---|---|---|---|
+| düz, duvar 10 / 16 / 22 px | 7 / 0 / 0 (üçü de) | tam | 0.9994 |
+| 7°, 15°, 30°, 45°, 60° döndürülmüş | 7 / 0 / 0 (hepsi) | ±0.25 | 0.970-0.995 |
+| `max_bosluk` 50 | 7 / 0 / 0 | | |
+| `max_bosluk` 70 (kapı 60 px) | 5 / 1 / 2 | | |
+
+Döndürülmüşte parça IoU'su kalın maskeninkinden (0.996-0.999) düşük; büyük
+ihtimalle en yakın komşu döndürmenin merdivenli kenarı ile düz dikdörtgen
+farkı. Doğrulanmadı.
+
+Kalınlık ölçümü önce tam piksel adımlıydı: eğik duvarda ±1 px sapma, parça
+IoU 0.92-0.98. Çeyrek piksel adımla ±0.25.
+
+**Gürültülü plan** (%1 piksel ters, 5 tohum):
+
+| ön işleme | doğru / fazla / eksik, tohum 0-4 |
+|---|---|
+| önce açma (`kalin_ayir`) | 7/3/0, 6/5/1, 7/2/0, 6/5/1, 5/8/2 |
+| önce 3x3 kapama | 5/1/2 hepsinde (pencere duvar oluyor) |
+| delik doldur (≤ 4 px) + açma | 7/0/0, 7/0/0, 7/0/0, 7/0/0, 7/1/0 |
+| delik doldur (≤ 10 px) + açma | 7/0/0, 6/2/1, 7/0/0, 7/0/0, 7/1/0 |
+| delik doldur (≤ 50 px) + açma | 7/0/0, 6/2/1, 6/1/1, 7/0/0, 7/1/0 |
+
+600x400 planda süre ~60 ms.
+
+## §5 Duvar, CVC-FP geliştirme bölümü (2026-10-17)
+
+`scripts/duvar_deney.py`, varsayılan akış (`duvar_adayi`: Otsu → delik
+doldur ≤ 4 → k×k açma). Yalnız geliştirme (86 plan). IoU cevaptaki
+duvar maskesiyle, plan başına; medyan [%10-%90].
+
+**Açma çekirdeği taraması, kalın maske IoU:**
+
+| k | I-II dolu (62) | I-II boş (1) | sayi (7) | image (13) | p (3) |
+|---|---|---|---|---|---|
+| 5 | 0.832 [0.764-0.860] | 0.174 | 0.278 | 0.001 | 0.307 |
+| 7 | **0.844** [0.770-0.870] | 0.175 | 0.153 | 0.000 | 0.004 |
+| 9 | 0.774 [0.710-0.831] | 0 | 0.036 | 0 | 0.003 |
+| 11 | 0.799 [0.731-0.853] | 0 | 0.000 | 0 | 0 |
+| 13 | 0.841 [0.759-0.900] | 0 | 0 | 0 | 0 |
+| 15 | **0.844** [0.764-0.903] | 0 | 0 | 0 | 0 |
+| 17 | 0.844 [0.764-0.903] | 0 | 0 | 0 | 0 |
+
+- Dolu olmayan stillerde yöntem duvar bulmuyor. Beklenen; artık sayıyla.
+- I-II dolu planlarda k=9'da çukur. Hata ayrışımı (ilk 20 dolu plan,
+  fazla / kesişim, eksik / kesişim): k=7 0.112 / 0.081, k=9 0.101 / 0.200,
+  k=13 0.017 / 0.200.
+- Görsel (IIa_BK0701, `results/ara/duvar_hata_kesit.png`, depoda değil):
+  ~7-8 px dolu bölme duvarlar k≥9'da tamamen kayboluyor; k=7'de merdiven
+  çizgisi duvar olarak kalıyor. İki aile tek çekirdekle ayrılmıyor (K-007).
+- Tavan (§3): medyan 0.95.
+
+**Hough parçaları** (`max_bosluk` 20; I-II dolu 62 plan):
+
+| k | kalın maske IoU | parça maskesi IoU | vektör kaybı | parça / cevap duvarı | süre / plan |
+|---|---|---|---|---|---|
+| 7 | 0.844 [0.770-0.870] | 0.796 [0.738-0.839] | 0.036 | 3.08 | 1.1 s (en çok 3.1) |
+| 13 | 0.841 [0.759-0.900] | 0.812 [0.744-0.856] | 0.027 | 0.67 | 0.6 s (en çok 2.4) |
+
+- Parça / cevap oranı yalnız işaret: cevaptaki duvar poligonu ile en uzun
+  düz parça aynı birim değil.
+- Ic_MT0601'de k=7'nin 104 parçasının 69'u plan alanı dışında (başlık
+  yazısı vb.); k=13'te 0. Plan alanını ayırmak ayrı bir adım olabilir.
+- Görsel: `results/ara/duvar_parcalar_ornek.png` (depoda değil). Dış
+  duvarlar pencerelerde doğru bölünüyor, köşe uçları kesişimde.

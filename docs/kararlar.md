@@ -36,7 +36,15 @@ kestirim. OpenCV, scikit-image, scipy.
 **Uygulama:** `tests/test_ortam.py` kilit dosyasında derin öğrenme
 kütüphanesi bulursa düşer.
 
-## K-003: Veri seti, açık (2026-10-17)
+## K-003: Veri seti: CVC-FP, geçerli (2026-10-17)
+
+**2026-10-17: CVC-FP alındı** (Ömer Can onayıyla; gerekirse başka set
+sonradan eklenir). İndirme, sha256, lisans ve içerik:
+[data/README.md](../data/README.md). Lisans cümlesi sayfada çelişkili
+(BY / BY-NC); ticari olmayan kullanım varsayılıyor. Dört stilin ölçümü
+[olcumler §3](olcumler.md).
+
+Seçim öncesi değerlendirme:
 
 | | ne | cevap | not |
 |---|---|---|---|
@@ -47,25 +55,77 @@ kütüphanesi bulursa düşer.
 yöntemlerin karşılaştırıldığı set ve cevabı duvar/kapı/pencere düzeyinde.
 CubiCasa5K stil çeşitliliği için ikinci set olabilir.
 
-**Doğrulanmadı:** iki setin de indirme bağlantısının çalıştığı, lisans
-metni, CVC-FP'deki dört stilin hangilerinde duvarın dolu siyah çizildiği.
+**Doğrulanmadı:** CubiCasa5K'nın bağlantısı ve lisansı.
 
 Kaynaklar: [CVC-FP sayfası](https://dag.cvc.uab.es/dataset/cvc-fp-database-for-structural-floor-plan-analysis/),
 [CubiCasa5K makalesi](https://arxiv.org/abs/1904.01920),
 [CubiCasa5K Zenodo](https://zenodo.org/records/2613548).
 
-## K-004: Ön işleme sırası, açık (2026-10-17)
+## K-004: Ön işleme sırası, öneri (2026-10-17)
 
 Sentetik planda ölçülen ödünleşim ([olcumler §2](olcumler.md)): gürültülü
 planda kalın/ince ayrımı (5x5 açma) önce gelirse duvar delikleri büyüyor;
 3x3 kapama önce gelirse pencerenin paralel çizgileri birleşip duvar oluyor.
 
+**Seçenekler:**
+
+- a) **Önce küçük delik doldurma, sonra açma** (`onisleme.duvar_adayi`).
+  Dört yanı mürekkep, alanı ≤ 4 piksel kâğıt bölgeleri dolar; pencere
+  şeritleri (100+ piksel) ve odalar kalır. Sentetik gürültülü planda duvar
+  parçaları 5 tohumun 4'ünde tam, birinde 1 fazla ([olcumler §4](olcumler.md)).
+  Eşik büyüyünce (10, 50) kötüleşiyor: gürültü pencere şeridini küçük
+  parçalara bölüyor, parçalar doluyor.
+- b) Önce açma: 5 tohumda 2-8 fazla parça. Önce kapama: her tohumda 1 fazla
+  2 eksik (pencere duvar oluyor).
+- c) Medyan filtre, sonra ikileme. Denenmedi.
+
+**Öneri: (a), varsayılan akış.** CVC-FP'de sıralar karşılaştırılmadı;
+taramadaki gürültü bağımsız piksel çevirmeye benzemeyebilir.
+
+## K-005: Geliştirme / test bölmesi, geçerli (2026-10-17)
+
+CVC-FP'nin resmî bölmesi yok. Her gruptan %30'u test: grup içinde ada göre
+sha1 sırası, ilk `round(0.3 n)` (`cvcfp.ayrilan_test_adlari`). 86
+geliştirme, 36 test (I-II 63/27, sayi 7/3, image 13/5, p 3/1).
+
+- Eşik ve yöntem seçimi yalnız geliştirmede. Test bir kez, sonda.
+- Envanter (§3) cevap istatistiği olarak 122 planın hepsine baktı; sistem
+  çıktısı değil.
+- Stili görmek için 6 planın görüntüsüne bakıldı, ikisi testte
+  (`1`, `IIa_A01001`). Bu planlara göre eşik seçilmedi.
+- I-II'nin içi boş 4 planından 3'ü teste düştü (rastgele).
+
+## K-006: Duvar vektörleştirme: iskelet + olasılıksal Hough, geçerli (2026-10-17)
+
+Kalın maske → iskelet → `HoughLinesP` → eşdoğrusal birleştirme → uçları
+maskeye uzatma → kavşağa çekme → enine kalınlık ölçümü (`duvar.py`).
+
+- Hough iskelette: her duvar tek orta çizgi verir, iki yüzü ayrı ayrı
+  eşlemek gerekmez.
+- `max_bosluk` kapı genişliğinden küçük olmalı: sentetik planda 60 piksellik
+  kapı, 70'te köprüleniyor. CVC-FP I-II geliştirmede en küçük kapı 77
+  piksel (%1'lik dilim 91), varsayılan 20.
+- Kalınlık enine çeyrek piksel adımla ölçülüyor; tam piksel adımı eğik
+  duvarda ±1 piksel sapıyordu.
+
+**Karşılaştırılmadı:** Canny + Hough ile iki yüzü eşleme, LSD, iskelet
+takibiyle parçalara bölme. Raporda "neden Hough" sorusu için en az biri
+gerekli.
+
+## K-007: İnce bölme duvarlar, açık (2026-10-17)
+
+CVC-FP dolu duvarlı planlarda iki duvar ailesi var: ~25 piksel dış/taşıyıcı
+ve ~7-8 piksel dolu siyah bölme duvar. Merdiven çizgisi gibi çizimler de bu
+kalınlıkta (bir örnekte görüldü). Tek çekirdekle açma ikisini ayıramıyor ([olcumler §5](olcumler.md)):
+k=7 bölme duvarı tutuyor ama merdiveni de duvar sayıyor, k≥9 bölme duvarı
+kaybediyor.
+
 **Seçenekler (denenmedi):**
 
-- a) Önce açma, sonra yalnız duvar maskesinde küçük delik doldurma.
-- b) Gürültüyü morfoloji yerine bağlı bileşen alanıyla silmek (alanı
-  eşikten küçük lekeler), sonra kalın/ince ayrımı.
-- c) Medyan filtre, sonra ikileme.
-
-**Neyle karar verilir:** veri setindeki gerçek gürültü tipine bakılarak.
-Sentetik gürültü (bağımsız piksel çevirme) taramadaki gürültüye benzemeyebilir.
+- a) İki ölçek: kalın maske (k≈13) kesin duvar; ince aday (k≈5-7 maskesi
+  eksi kalın) yalnız kurala uyarsa duvar: düz, kalınlığı boyunca sabit,
+  iki ucu da başka duvara ya da kapı/pencere boşluğuna dayanıyor.
+- b) İnce adayları uzunluk ve kalın duvara bağlılıkla elemek (a'nın sade
+  hali).
+- c) Plan başına kalınlık histogramından iki tepe bulup eşiği plana göre
+  seçmek.

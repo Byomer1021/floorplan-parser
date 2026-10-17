@@ -16,20 +16,26 @@ room/wall/door graph.*
 GTÜ, Görüntü İşleme dersi projesi (2026 güz). Ders kodu, takvim ve takım
 henüz kayıtlı değil.
 
-**Hafta 0: ortam kuruldu, ön işleme ve cevabı bilinen sentetik test planı
-yazıldı. Gerçek bir plan üzerinde henüz hiçbir şey ölçülmedi.** Bu sayfaya
-her sayı ölçüldüğü anda girer.
+**Hafta 0: ortam, ön işleme ve duvar adımının ilk sürümü yazıldı; CVC-FP
+indirildi ve geliştirme bölümünde ilk ölçümler alındı.** Bu sayfaya her
+sayı ölçüldüğü anda girer. Test bölümüne henüz bakılmadı.
 
-Şu ana kadar ölçülen, yalnız sentetik planda ([olcumler §2](docs/olcumler.md)):
+Şu ana kadar ölçülen:
 
-- 5x5 açmayla kalın/ince ayrımı temiz planda duvarı ince çizgilerden
-  ayırıyor: duvar IoU 0.9991 (16 fazla piksel, eksik yok); kapı yayı,
-  kanadı ve pencere çizgilerinin 1338/1354 pikseli ince tarafta.
-- Gürültülü planda (%1 piksel ters) ön işleme sırası bir ödünleşim:
-  önce açma yapılırsa duvardaki 161-207 delik 626-911 eksik piksele
-  büyüyor; önce kapama yapılırsa eksik kalmıyor ama pencere duvara
-  dönüşüyor (~1220 fazla piksel). Karar gerçek veriye bakılarak verilecek
-  ([K-004](docs/kararlar.md)).
+- **Veri:** CVC-FP, 122 plan, dört çizim stili. Duvarı dolu siyah çizilmiş
+  olanlar 86 plan (%70); kalanı taralı ya da çift çizgi
+  ([olcumler §3](docs/olcumler.md)).
+- **Sentetik plan:** duvar adımı 7 duvarın 7'sini buluyor, düz ve 7-60°
+  döndürülmüş, uç hatası ≤ 2 px, kalınlık ±0.25 px
+  ([olcumler §4](docs/olcumler.md)).
+- **CVC-FP, dolu duvarlı 62 geliştirme planı:** kalın maske ile cevaptaki
+  duvarın IoU'su medyan 0.84; Hough parçalarından çizilen maske 0.80-0.81;
+  plan başına 0.6-1.1 s. Bu yöntemin tavanı 0.95
+  ([olcumler §5](docs/olcumler.md)).
+- **Bilinen sınır:** ~7-8 px'lik dolu bölme duvarlar, merdiven gibi aynı
+  kalınlıktaki çizimlerden tek açma çekirdeğiyle ayrılamıyor
+  ([K-007](docs/kararlar.md)). Taralı ve çift çizgili stillerde yöntem
+  duvar bulmuyor (IoU ~0).
 
 ## Akış
 
@@ -39,11 +45,11 @@ her sayı ölçüldüğü anda girer.
 | 2 | İkileme | Otsu / uyarlamalı eşik | `onisleme` | yazıldı |
 | 3 | Gürültü | açma / kapama | `onisleme` | yazıldı |
 | 4 | Kalın/ince ayrımı | duvar kalınlığına yakın çekirdekle açma | `onisleme` | yazıldı |
-| 5 | Duvar | olasılıksal Hough / LSD, eşdoğrusal parçaları birleştirme | | yazılmadı |
+| 5 | Duvar | iskelet + olasılıksal Hough, eşdoğrusal birleştirme, kavşağa çekme | `duvar` | ilk sürüm |
 | 6 | Kapı | duvardaki kesinti + yay (Hough çember / şablon eşleme) | | yazılmadı |
 | 7 | Pencere | duvar boşluğunda paralel ince çizgiler | | yazılmadı |
 | 8 | Graf | odalar düğüm, kapılar kenar (networkx) | | yazılmadı |
-| 9 | Değerlendirme | veri setinin SVG cevabıyla piksel ve nesne düzeyinde | | yazılmadı |
+| 9 | Değerlendirme | CVC-FP SVG cevabıyla piksel IoU; sentetikte parça eşleme | `degerlendirme`, `cvcfp` | duvar için var |
 
 `sentetik` modülü cevabı bilinen plan çizer; her adımın testi önce orada
 geçer.
@@ -58,7 +64,9 @@ tensorflow, ultralytics vb. bulursa düşer.
 
 ```
 uv sync
+uv run python scripts/cvcfp_indir.py   # veri seti, ~27 MB
 uv run pytest
+uv run python scripts/duvar_deney.py --grup I-II --kalinlik 7 13
 ```
 
 Python 3.12, bağımlılıklar `uv.lock`'ta sabit.
@@ -67,10 +75,11 @@ Python 3.12, bağımlılıklar `uv.lock`'ta sabit.
 
 ```
 src/floorplan_parser/   kod, adım başına bir modül
-tests/                  sentetik plan üzerinde testler
+scripts/                veri indirme, envanter, deneyler
+tests/                  sentetik plan ve CVC-FP okuyucu testleri
 data/                   veri seti (depoya girmez, bkz. data/README.md)
 docs/kararlar.md        tasarım kararları, K-NNN
 docs/olcumler.md        numaralı ölçüm kaydı
 docs/gunluk/            günlük çalışma kaydı
-results/ara/            yeniden üretilebilen ara çıktılar (depoya girmez)
+results/                deney CSV'leri; results/ara/ görseller (depoya girmez)
 ```

@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import pytest
 
-from floorplan_parser.onisleme import ac, ikile, kalin_ayir, kapa
+from floorplan_parser.onisleme import ac, delik_doldur, ikile, kalin_ayir, kapa
 from floorplan_parser.sentetik import MUREKKEP, plan_ciz
 
 
@@ -92,3 +92,21 @@ def test_genis_kapama_kapiyi_kapatir():
 
     assert bosluk_dolu(9) == 0
     assert bosluk_dolu(kapi.genislik + 5) == 1
+
+
+def test_delik_doldur_kucuk_kapali_bolgeyi_doldurur():
+    m = np.zeros((40, 40), np.uint8)
+    m[5:35, 5:35] = 255
+    m[10, 10] = 0  # 1 piksellik delik
+    m[20:30, 20:30] = 0  # 100 piksellik kapalı bölge
+    m[0:3, 0:2] = 0  # kenara değen kâğıt zaten 0
+    d = delik_doldur(m, 4)
+    assert d[10, 10] == 255
+    assert d[20:30, 20:30].max() == 0
+    assert d[0, 0] == 0
+
+
+def test_delik_doldur_pencere_seritlerini_korur():
+    # Temiz plandaki kapalı kâğıt bölgelerinin en küçüğü pencere şeritleri (100, 200).
+    ikili = ikile(plan_ciz().goruntu)
+    assert np.array_equal(delik_doldur(ikili, 99), ikili)
