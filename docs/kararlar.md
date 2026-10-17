@@ -163,7 +163,7 @@ duvarların ~%5'i hiçbir duvara değmiyor. Yanlış alan ince duvar alanının
 4. Yay olmayan parça boşlukları: duvar bandında ≥ 2 paralel ince çizgi
    pencere.
 
-Geliştirmede kapı F1 0.853 (K 0.972, D 0.760), pencere F1 0.670
+Geliştirmede kapı F1 0.854 (K 0.977, D 0.759), pencere F1 0.671
 ([olcumler §8](olcumler.md)).
 
 **Denenip bırakılan:** menteşeyi yalnız dışbükey köşede aramak (F1 0.37);
@@ -175,3 +175,25 @@ daraltıyor.
 **Sınırlar:** piksel eşikleri (40-200, 75) CVC-FP I-II ölçeğine bağlı;
 porte-fenêtre ve kanatlı pencere cevapta Window, sistemde yarıçapa göre
 ayrılıyor; yarı açık çizilmiş kapıların çoğu kaçıyor.
+
+## K-009: Oda grafı: kirişle kapat + ayak izi + bağlı bileşen, öneri (2026-10-17)
+
+`oda.oda_grafi`: kapı ve pencere boşlukları kirişle kapatılır; bina dışı,
+duvar maskesinin 151 px kareyle kapanmışının delikleri dolu hali (ayak izi)
+dışında kalan alan; içerideki boş alanın 4-bağlı bileşenleri oda; her
+kapının iki yanındaki oda bir kenar (networkx MultiGraph).
+
+Geliştirmede oda F1 0.534 (K 0.769, D 0.409), kenar F1 0.236
+([olcumler §9](olcumler.md)). İlk sürüm; kalan hatanın çoğu iki yerde:
+
+- Ayak izi: dış duvardaki 150 px'ten geniş açıklık. Büyük çekirdek
+  içbükey dış alanları (sundurma, teras) da içeri alıyor. Denenecek: ayak
+  izini kirişlerle kapanmış duvardan çıkarmak; içbükey bölgeyi duvar
+  oranıyla elemek.
+- İnce çizgiyle (2-3 px) çizilmiş bölme duvarlar. Denenecek: yalnız oda
+  bölütleme için, iki ucu duvara değen uzun ince düz çizgileri sınır saymak.
+
+**Bulunamaz:** cevaptaki duvarsız ayrımlar (131 ilişki); çizimde mürekkebi
+yok.
+
+**Denenip bırakılan:** bütün boşluk adaylarını kapatmak (576 fazla oda).

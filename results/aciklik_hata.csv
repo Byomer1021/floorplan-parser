@@ -1,7 +1,7 @@
 ad,hata,tur,pay,yaricap,x,y
 IIa_AP3301,eksik,yay_zayif,0.71,142,940,1311
 IIa_AP3301,eksik,yay_zayif,0.46,101,1042,1655
-IIa_AP3401,eksik,yay_zayif,0.67,92,1274,613
+IIa_AP3401,eksik,yay_zayif,0.58,92,1274,613
 IIa_AP3401,eksik,yay_zayif,0.54,102,1633,882
 IIa_BA0710,eksik,yay_zayif,0.75,95,959,1778
 IIa_BA0710,eksik,aday_yok,0.0,134,756,1944
@@ -9,8 +9,7 @@ IIa_BA0710,eksik,aday_yok,0.0,140,618,1937
 IIa_BA0710,eksik,aday_yok,0.0,135,623,1795
 IIa_BA0710,eksik,yay_zayif,0.25,104,772,1717
 IIa_BK0701,fazla,geometri,1.0,86,938,1072
-IIa_BK0701,eksik,yay_zayif,0.67,145,1792,1676
-IIa_BK0701,eksik,yay_zayif,0.75,139,572,1595
+IIa_BK0701,eksik,yay_zayif,0.58,145,1792,1676
 IIa_BK0701,eksik,yay_zayif,0.5,99,1342,1436
 IIa_BK0701,eksik,yay_zayif,0.62,105,1425,1374
 IIa_BK0701,eksik,geometri,1.0,142,988,1092
@@ -36,7 +35,6 @@ IIa_GZ0501,eksik,yay_zayif,0.71,95,1097,1686
 IIa_GZ0520,fazla,pencere,1.0,98,948,1813
 IIa_GZ0520,eksik,yay_zayif,0.5,101,1425,1503
 IIa_GZ0520,eksik,yay_zayif,0.62,96,1389,1687
-IIa_MN0605,fazla,bos,0.88,180,1917,866
 IIa_MN0605,eksik,yay_zayif,0.25,182,1402,1043
 IIa_MN0605,eksik,yay_zayif,0.5,95,1840,1150
 IIa_MN0605,eksik,aday_yok,0.0,125,2002,1173
@@ -58,7 +56,10 @@ IIa_SL0801,eksik,yay_zayif,0.54,99,1525,1490
 IIa_SR1101,fazla,bos,0.83,87,675,1091
 IIa_SR1101,eksik,yay_zayif,0.42,111,1183,1169
 IIa_SR1101,eksik,yay_zayif,0.38,112,1066,1167
+IIa_SR1101,eksik,aday_yok,0.0,107,958,866
+IIa_SR1101,eksik,aday_yok,0.0,110,1067,856
 IIa_SR1102,eksik,yay_zayif,0.62,142,2364,1097
+IIa_SR1102,eksik,yay_zayif,0.25,104,1930,875
 IIa_SR1102,eksik,aday_yok,0.0,111,1086,1185
 IIa_SR1102,eksik,aday_yok,0.0,112,974,1073
 IIa_SR1102,eksik,aday_yok,0.0,106,981,885
@@ -80,7 +81,6 @@ IIc_UO0701,eksik,yay_zayif,0.42,90,1290,1548
 IIc_UO0701,eksik,yay_zayif,0.71,97,1182,1482
 IId_AD0801,eksik,yay_zayif,0.5,98,1333,1430
 IId_BA0702,eksik,yay_zayif,0.67,134,1723,1544
-IId_BA0702,eksik,yay_zayif,0.75,104,1183,1270
 IId_BA0702,eksik,yay_zayif,0.33,101,989,1883
 IId_GI0601,eksik,yay_zayif,0.71,134,1637,2272
 IId_GI0601,eksik,yay_zayif,0.33,177,1336,1805
@@ -130,7 +130,6 @@ Ib_PR0901_sommaire,fazla,bos,0.83,80,1428,1597
 Ib_PR0901_sommaire,eksik,yay_zayif,0.5,137,1740,1712
 Ib_PR0901_sommaire,eksik,yay_zayif,0.42,102,1281,1569
 Ib_PR0901_sommaire,eksik,diger,0.83,77,1416,1557
-Ib_RI0501_sommaire,fazla,pencere,0.83,86,1091,707
 Ib_RI0501_sommaire,eksik,yay_zayif,0.46,140,889,1804
 Ib_RI0501_sommaire,eksik,yay_zayif,0.38,113,1164,1508
 Ib_RI0501_sommaire,eksik,yay_zayif,0.38,116,1238,1631

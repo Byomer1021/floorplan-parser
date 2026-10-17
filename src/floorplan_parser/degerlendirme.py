@@ -69,11 +69,11 @@ def poligon_iou(p: np.ndarray, q: np.ndarray) -> float:
     return float((a & b).sum() / birlesim) if birlesim else 0.0
 
 
-def poligon_eslestir(
+def poligon_eslesmeleri(
     tahmin: Sequence[np.ndarray], cevap: Sequence[np.ndarray], esik: float = 0.5
-) -> tuple[int, int, int]:
-    """IoU'su ``esik``'ten büyük çiftleri en iyiden başlayarak bire bir eşler.
-    (doğru, fazla, eksik)."""
+) -> list[tuple[int, int]]:
+    """IoU'su ``esik``'ten büyük çiftleri en iyiden başlayarak bire bir eşler:
+    (tahmin sırası, cevap sırası) listesi."""
     adaylar = []
     for i, t in enumerate(tahmin):
         tk = (t.min(0), t.max(0))
@@ -84,9 +84,51 @@ def poligon_eslestir(
             v = poligon_iou(t, c)
             if v >= esik:
                 adaylar.append((v, i, j))
-    ti, cj = set(), set()
+    ti, cj, ciftler = set(), set(), []
     for _, i, j in sorted(adaylar, reverse=True):
         if i not in ti and j not in cj:
             ti.add(i)
             cj.add(j)
-    return len(ti), len(tahmin) - len(ti), len(cevap) - len(ti)
+            ciftler.append((i, j))
+    return ciftler
+
+
+def poligon_eslestir(
+    tahmin: Sequence[np.ndarray], cevap: Sequence[np.ndarray], esik: float = 0.5
+) -> tuple[int, int, int]:
+    """(doğru, fazla, eksik), ``poligon_eslesmeleri`` ile."""
+    d = len(poligon_eslesmeleri(tahmin, cevap, esik))
+    return d, len(tahmin) - d, len(cevap) - d
+
+
+def bolge_eslesmeleri(
+    etiket: np.ndarray, cevap: Sequence[np.ndarray], esik: float = 0.5
+) -> list[tuple[int, int, float]]:
+    """Etiket görüntüsündeki bölgeler (> 0) ile cevap poligonları arasında bire
+    bir eşleme, IoU ≥ ``esik``: (etiket, cevap sırası, IoU)."""
+    n = int(etiket.max()) + 1 if etiket.size else 1
+    alan = np.bincount(etiket[etiket > 0].ravel(), minlength=n)
+    adaylar = []
+    for j, c in enumerate(cevap):
+        x0, y0 = np.floor(c.min(0)).astype(int)
+        x1, y1 = np.ceil(c.max(0)).astype(int) + 1
+        x0, y0 = max(x0, 0), max(y0, 0)
+        kes = etiket[y0:y1, x0:x1]
+        m = np.zeros(kes.shape, np.uint8)
+        cv2.fillPoly(m, [np.round((c - [x0, y0]) * 16).astype(np.int32)], 1, cv2.LINE_8, 4)
+        icerde = kes[(m > 0) & (kes > 0)]
+        if icerde.size == 0:
+            continue
+        kesisim = np.bincount(icerde, minlength=n)
+        cevap_alan = int(m.sum())
+        for e in np.flatnonzero(kesisim):
+            v = kesisim[e] / (alan[e] + cevap_alan - kesisim[e])
+            if v >= esik:
+                adaylar.append((float(v), int(e), j))
+    te, cj, ciftler = set(), set(), []
+    for v, e, j in sorted(adaylar, reverse=True):
+        if e not in te and j not in cj:
+            te.add(e)
+            cj.add(j)
+            ciftler.append((e, j, v))
+    return ciftler

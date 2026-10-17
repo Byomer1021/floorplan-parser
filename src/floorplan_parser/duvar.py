@@ -383,8 +383,29 @@ def iki_olcekli_duvarlar(
     kalinliklar = np.array([p.kalinlik for p in hepsi])
     oynar = set(range(len(kalin_parcalar), len(hepsi)))
     cekili = kavsaklara_cek(uclar, kalinliklar, math.radians(20), oynar)
+    # Kapsam da çekilen uca kadar uzar: yoksa ince ile kalın duvar arasında
+    # raster'da 1-2 px yarık kalır ve odalar o yarıktan birbirine akar.
     secilen = [
-        replace(p, x1=float(u[0]), y1=float(u[1]), x2=float(u[2]), y2=float(u[3]))
+        replace(
+            p,
+            x1=float(u[0]),
+            y1=float(u[1]),
+            x2=float(u[2]),
+            y2=float(u[3]),
+            kapsam=_kapsami_uzat(p.kapsam, u),
+        )
         for p, u in zip(secilen, cekili[len(kalin_parcalar) :])
     ]
     return kalin, kalin_parcalar, secilen
+
+
+def _kapsami_uzat(kapsam: tuple, graf: np.ndarray) -> tuple[float, float, float, float]:
+    """Kapsamı, graf uçlarının doğru üzerindeki izdüşümlerini de kapsayacak
+    kadar uzatır (kısaltmaz)."""
+    k = np.array(kapsam)
+    a, b = k[:2], k[2:]
+    L = max(np.linalg.norm(b - a), 1e-9)
+    d = (b - a) / L
+    t = [0.0, L, (graf[:2] - a) @ d, (graf[2:] - a) @ d]
+    yeni_a, yeni_b = a + min(t) * d, a + max(t) * d
+    return (*map(float, yeni_a), *map(float, yeni_b))

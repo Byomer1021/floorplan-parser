@@ -300,7 +300,9 @@ dikdörtgeni ya da kanatlı pencerede açılma alanı.
 | 3 + yarı açık kapı, eşik 0.90 | 452/93/103 | 0.829 / 0.814 / 0.822 | 295/89/279 | 0.616 |
 
 Seçilen: 3. Eşikler (0.8, 75 px) bu planlarda seçildi; test bölümünde
-bir kez ölçülecek.
+bir kez ölçülecek. §9'daki ince duvar kapsam düzeltmesinden sonra 3:
+kapı 421/10/134, K 0.977 / D 0.759 / F1 0.854; pencere 335/89/239, F1
+0.671 (duvar IoU değişmedi).
 
 - **Menteşe her zaman dışbükey köşede değil:** kapı boşluğu bir duvar ucu
   ile dik duvarın düz yüzü arasında olabilir ve menteşe o yüzde durur.
@@ -317,16 +319,71 @@ bir kez ölçülecek.
   ortasındaki T-kavşağı) uç oraya çekilip duvar 20-60 px kısalıyordu.
   Duvar IoU'su değişmedi (§6 yeniden ölçüldü: 0.926 / 0.880).
 
-**Sürüm 3'ün kalan hataları** (`scripts/aciklik_hata.py`):
+**Sürüm 3'ün kalan hataları** (`scripts/aciklik_hata.py`, kapsam
+düzeltmesinden sonra):
 
-| eksik kapı (133) | | fazla kapı (12) | |
+| eksik kapı (134) | | fazla kapı (10) | |
 |---|---|---|---|
-| yay zayıf (aday var, en iyi pay < 0.8) | 96 | cevapta pencere | 4 |
-| aday yok | 33 | geometri (0.1 ≤ IoU < 0.5) | 3 |
-| geometri | 3 | boşta | 5 |
+| yay zayıf (aday var, en iyi pay < 0.8) | 95 | cevapta pencere | 3 |
+| aday yok | 35 | geometri (0.1 ≤ IoU < 0.5) | 3 |
+| geometri | 3 | boşta | 4 |
 | diğer | 1 | | |
 
-- Cevaptaki 555 kapının 522'sinde (%94) parça ya da köşe boşluğu adayı var.
-- "Yay zayıf" 96 kapının en iyi payı %10 / 50 / 90: 0.33 / 0.58 / 0.75.
+- Cevaptaki 555 kapının 520'sinde (%94) parça ya da köşe boşluğu adayı var.
+- "Yay zayıf" kapıların (düzeltmeden önceki 96 kapı) en iyi payı %10 / 50 / 90: 0.33 / 0.58 / 0.75.
   Görüntüyle bakılan 8 örneğin çoğu yarı açık çizilmiş kapı (kanat 30-60°,
   yay o açıya kadar); denenen kısmi varsayım net kazanç vermedi (tablo).
+
+## §9 Oda grafı (2026-10-17)
+
+`oda.py`, `scripts/oda_deney.py`, `scripts/oda_hata.py`. Geliştirme, I-II
+dolu duvarlı 62 plan; cevapta 602 oda, kapılı `access` ilişkisi (Door,
+Room, Room) 434, duvarsız ayrım ilişkisi (Room, Room, Separation) 131.
+
+Akış: duvar maskesi + kapı ve pencere kirişleri; bina ayak izi (duvar
+maskesinin büyük kareyle kapanmışı, delikleri dolu) içindeki boş alanın
+4-bağlı bileşenleri oda (≥ 5000 px); her kapının iki yanındaki oda kenar.
+
+Eşleme: oda bölgesi ile cevap Room poligonu IoU ≥ 0.5, bire bir. Kenar
+doğru: kapısı cevap kapısıyla eşleşmiş ve iki odası o kapının `access`
+ilişkisindeki iki odayla eşleşmiş.
+
+| ayak izi çekirdeği | sınıflanmamış boşlukları da kapat | oda D/F/E | oda K / D / F1 | kenar D/F/E | kenar F1 |
+|---|---|---|---|---|---|
+| yok (dış = kenara değen) | hayır | 184/11/418 | 0.944 / 0.306 / 0.462 | 21/20/413 | 0.088 |
+| yok | evet | 282/576/320 | 0.329 / 0.468 / 0.386 | 19/209/415 | 0.057 |
+| **151** | **hayır** | **246/74/356** | **0.769 / 0.409 / 0.534** | **74/119/360** | **0.236** |
+| 151 | evet | 277/527/325 | 0.345 / 0.460 / 0.394 | 16/196/418 | 0.050 |
+| 251 | hayır | 243/123/359 | 0.664 / 0.404 / 0.502 | | |
+| 301 | hayır | 263/132/339 | 0.666 / 0.437 / 0.528 | | |
+| 401 | hayır | 264/144/338 | 0.647 / 0.439 / 0.523 | | |
+
+Seçilen: çekirdek 151, sınıflanmamış boşluklar açık. Kapı kenarlarının
+112'sinin bir yanı bina dışı (cevapta karşılığı yok, sayılmadı).
+
+- **Bütün boşluk adaylarını kapatmak odaları bölüyor** (576 fazla oda):
+  adayların bir kısmı açıklık değil, oda ortasından geçen kiriş üretiyor.
+- **Dış = resmin kenarına değen bileşen** tanımında kapanmamış tek açıklık
+  bütün iç mekânı dışarı akıtıyordu; ayak izi bunu kesiyor.
+- Düzeltilen iki hata: ince duvar kalın duvara 1-2 px yarıkla değiyordu
+  (ince parça kapsamı kavşağa çekilen uca uzatıldı; duvar IoU değişmedi,
+  kapı F1 0.853 → 0.854); ayak izinde kapama resmin kenarına yapışıyordu
+  (kenar payı eklendi).
+
+**Kaçan 356 odanın nedeni** (`scripts/oda_hata.py`, çekirdek 151):
+
+| neden | oda |
+|---|---|
+| dış sayıldı (ayak izinin dışında kaldı) | 204 |
+| komşuyla birleşti, aralarında cevapta kapı var (kapı bulunamadı ya da açıklık kapanmadı) | 101 |
+| komşuyla birleşti, aralarında duvarsız ayrım var (bu yöntemle bulunamaz) | 30 |
+| komşuyla birleşti, cevapta ilişki yok | 20 |
+| kısmi (IoU < 0.5) | 1 |
+
+Görüntüyle bakılan 3 planda (IIa_BK0701, IIa_AP3401, Ib_RI0501):
+
+- Dış duvarda 150 px'ten geniş açıklık (porte-fenêtre) ayak izini deliyor;
+  daha büyük çekirdek bunu kapatıyor ama sundurma ve teras gibi içbükey dış
+  alanları içeri alıyor (tablo: doğru oda artıyor, fazla daha çok artıyor).
+- Bazı bölme duvarlar 2-3 px çizgiyle çizilmiş (Ib_RI0501: HALL, CUISINE,
+  SEJOUR arası); ince duvar adımı 7 px'ten inceyi atıyor, odalar birleşiyor.
