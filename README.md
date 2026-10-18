@@ -35,8 +35,10 @@ sayı ölçüldüğü anda girer. Test bölümüne henüz bakılmadı.
   ([§5](docs/olcumler.md)): ~7-8 px'lik bölme duvarlar merdiven gibi aynı
   kalınlıktaki çizimlerden ayrılamıyordu ([K-007](docs/kararlar.md)).
 - **Kapı ve pencere** (aynı 62 plan): kapı kesinlik 0.977, duyarlılık
-  0.759, F1 0.854; pencere F1 0.671 ([olcumler §8](docs/olcumler.md)).
-  Kalan kapı hatalarının çoğu yarı açık çizilmiş kapılar.
+  0.759, F1 0.854 ([olcumler §8](docs/olcumler.md)); pencere kesinlik
+  0.869, duyarlılık 0.810, F1 0.839 ([§13](docs/olcumler.md); çift kanatlı
+  ve geniş pencereler eklenmeden önce 0.671). Kalan kapı hatalarının çoğu
+  yarı açık çizilmiş kapılar.
 - **Oda grafı** (aynı 62 plan): oda F1 0.706 (kesinlik 0.769, duyarlılık
   0.653), kapı kenarı F1 0.322 ([olcumler §9-11](docs/olcumler.md)). Odalar
   uzaklık dönüşümü + watershed ile bölünüyor. Kaçan odaların en büyük payı
@@ -55,7 +57,7 @@ sayı ölçüldüğü anda girer. Test bölümüne henüz bakılmadı.
 - **Literatür:** dolu duvarlı planlarda bulunan tek klasik duvar sayısının
   üstünde (0.908 / 0.831). Bütün stillerde öğrenilmiş yöntemlerin
   (0.77-0.89) çok altında. Kapı duyarlılığı FloorYOLO'ya yakın, pencere
-  belirgin altında. Kurulum farklarıyla birlikte:
+  altında (kutu IoU'lu F1 0.665 / ~0.76). Kurulum farklarıyla birlikte:
   [docs/literatur.md](docs/literatur.md).
 
 ## Akış
@@ -68,7 +70,7 @@ sayı ölçüldüğü anda girer. Test bölümüne henüz bakılmadı.
 | 4 | Kalın/ince ayrımı | iki ölçek: kalın açma + kurala uyan ince parçalar | `onisleme`, `duvar` | yazıldı |
 | 5 | Duvar | iskelet + olasılıksal Hough, eşdoğrusal birleştirme, kavşağa çekme | `duvar` | ilk sürüm |
 | 6 | Kapı | duvar ucundan ışınla boşluk + 4 varsayımlı çeyrek yay testi | `aciklik` | yazıldı |
-| 7 | Pencere | boşlukta paralel ince çizgiler; küçük yay kanatlı pencere | `aciklik` | yazıldı |
+| 7 | Pencere | boşlukta paralel ince çizgiler; küçük yay kanatlı, iki yarım yay çift kanatlı pencere; 150-450 px geniş boşluklar da | `aciklik` | yazıldı |
 | 8 | Graf | boşlukları kirişle kapat (geniş açıklıklar dahil) + ayak izi + uzaklık dönüşümü ve watershed; kapı iki yandaki odayı bağlar | `oda`, `akis` | yazıldı |
 | 9 | Değerlendirme | duvar piksel IoU; kapı/pencere/oda IoU ≥ 0.5 eşleme; kenar = kapı + iki oda | `degerlendirme`, `cvcfp` | hepsi |
 

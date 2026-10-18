@@ -178,6 +178,28 @@ daraltıyor.
 kapatmak yanlışı 66'dan 40'a indirdi, ama uçtan uca oda F1 +0.006, kenar
 F1 0. Kısmi kapalı; seçenekler (`kismi_*`) kodda duruyor.
 
+**2026-10-18, pencere ikinci tur** ([olcumler §13](olcumler.md)): hata
+sınıflandırması (`scripts/pencere_hata.py`) iki büyük kalem gösterdi:
+200 px'ten geniş pencereler hiç aday olmuyordu (113 eksik) ve çift kanatlı
+pencerelerin cevap poligonu dikdörtgen + iki açılma alanıydı (53 eksik, 70
+fazla, IoU ~0.40). Eklenenler:
+
+- Çift kanat: boşluğun iki ucunda menteşe, yarım genişlikte iki çeyrek yay;
+  ikisinin küçük payı ≥ 0.8 ve tek yaydan iyiyse çift kanatlı pencere.
+  Poligon dikdörtgen + iki açılma alanı.
+- Tek kanatlı pencerenin poligonuna dikdörtgen de katılır.
+- Açıklıklarla örtüşmeyen geniş boşluklarda (150-450 px) çift kanat ve
+  paralel çizgi denenir. Karşı duvar parçaya dönüşmemiş kısa bir ayaksa
+  yerel test (enine genişlik ≈ kalınlık, ışına ortalı) kabul eder. Bu test
+  yalnız pencere aramada; oda grafının geniş boşlukları değişmedi.
+
+Geliştirmede pencere F1 0.671 → 0.839 (K 0.869, D 0.810). Kapı, duvar
+aynı; oda ve kenar F1 ±0.001.
+
+**Sınır (yeni):** garaj kapısı (cevapta Parking, Door ya da Window değil)
+geniş boşlukta pencere bulunuyor: 29 fazla. Sürgülü pencereden ayrımı
+birkaç piksellik taşmaya dayanıyor; kural yazılmadı.
+
 **Sınırlar:** piksel eşikleri (40-200, 75) CVC-FP I-II ölçeğine bağlı;
 porte-fenêtre ve kanatlı pencere cevapta Window, sistemde yarıçapa göre
 ayrılıyor; yarı açık çizilmiş kapıların çoğu kaçıyor.

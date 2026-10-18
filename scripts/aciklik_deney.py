@@ -48,6 +48,16 @@ def main() -> None:
     ap.add_argument("--kismi-pencere", type=int, default=1)
     ap.add_argument("--kismi-kanat-yan", type=float, default=0.3)
     ap.add_argument("--kapi-yontemi", default="bosluk_kose", choices=["bosluk", "bosluk_kose"])
+    ap.add_argument("--cift-kanat", type=int, default=int(VARSAYILAN_ACIKLIK_KURAL.cift_kanat))
+    ap.add_argument(
+        "--kanat-dikdortgen", type=int, default=int(VARSAYILAN_ACIKLIK_KURAL.kanat_dikdortgen)
+    )
+    ap.add_argument(
+        "--genis-pencere", type=int, default=int(VARSAYILAN_ACIKLIK_KURAL.genis_pencere)
+    )
+    ap.add_argument(
+        "--genis-kisa-duvar", type=int, default=int(VARSAYILAN_ACIKLIK_KURAL.genis_kisa_duvar)
+    )
     ap.add_argument("--etiket", default="")
     a = ap.parse_args()
     kural = replace(
@@ -57,6 +67,10 @@ def main() -> None:
         kismi_acilar=tuple(float(x) for x in a.kismi_acilar.split(",")),
         kismi_pencerede=bool(a.kismi_pencere),
         kismi_kanat_yan=a.kismi_kanat_yan,
+        cift_kanat=bool(a.cift_kanat),
+        kanat_dikdortgen=bool(a.kanat_dikdortgen),
+        genis_pencere=bool(a.genis_pencere),
+        genis_kisa_duvar=bool(a.genis_kisa_duvar),
     )
 
     satirlar = []

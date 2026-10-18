@@ -23,8 +23,9 @@ geliştirme bölümünden ([olcumler §12](olcumler.md)). Test bölümü henüz
 - **Kapı:** dolu planlarda kesinlik çok yüksek (0.981), duyarlılık
   FloorYOLO'ya yakın (0.762 / 0.786). Bütün stillerde duyarlılık 0.542'ye
   düşüyor.
-- **Pencere:** FloorYOLO'nun belirgin altındayız. Kutu IoU'lu F1 0.49,
-  onlarınki yaklaşık 0.76.
+- **Pencere:** FloorYOLO'nun altındayız. Kutu IoU'lu F1 0.665, onlarınki
+  yaklaşık 0.76. Bu belge ilk yazıldığında 0.49'du. Çift kanatlı ve geniş
+  pencereler eklendikten sonra yükseldi ([olcumler §13](olcumler.md)).
 - **Oda:** Ahmed vd. ve Macé vd. bizim dolu grubumuzla aynı plan ailesinde
   çalışmış, ama ölçüt farklı: kısmi eşleşmeye puan veren DR/RA. Sayılar
   doğrudan kıyaslanamaz (ayrıntı aşağıda).
@@ -97,6 +98,8 @@ Kıyas notları:
 | Ziran ve Marinai 2018 (FloorYOLO'da ikinci el) | Faster R-CNN, SSD | CVC-FP | mAP | 0.31 (d1) / 0.39 (d2) | |
 | **bu çalışma, dolu** | boşluk + çeyrek yay şablonu, paralel çizgi | geliştirme 62 | kutu IoU ≥ 0.5 | **0.981 / 0.762** | **0.580 / 0.429** |
 | **bu çalışma, bütün stiller** | 〃 | geliştirme 86 | 〃 | **0.973 / 0.542** | **0.521 / 0.298** |
+| **bu çalışma, dolu, §13 sonrası** | + çift kanat, geniş boşluk | geliştirme 62 | 〃 | 0.981 / 0.762 | **0.690 / 0.643** |
+| **bu çalışma, bütün stiller, §13 sonrası** | 〃 | geliştirme 86 | 〃 | 0.973 / 0.542 | **0.629 / 0.447** |
 
 Notlar:
 

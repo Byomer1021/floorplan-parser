@@ -579,3 +579,79 @@ Grup başına, hepsi (`results/degerlendir_gelistirme_hepsi.csv`):
 - Oda duyarlılığının tavanı (duvarsız ayrımla birleşen 79 oda bulunamaz):
   (602 - 79) / 602 ≈ 0.87. §10'daki 0.85 o zamanki 91 odayla
   hesaplanmıştı.
+
+## §13 Pencere: çift kanat, geniş boşluk (2026-10-18)
+
+Geliştirme, I-II dolu duvarlı 62 plan; cevapta 574 pencere. Hata
+sınıflandırması: `scripts/pencere_hata.py` (sınıf tanımları betikte).
+
+**Başlangıç (§11 akışı), 335/89/239:**
+
+| eksik (239) | | fazla (89) | |
+|---|---|---|---|
+| aday yok | 113 | geometri (0.1 ≤ IoU < 0.5) | 70 |
+| geometri | 53 | cevapta kapı | 10 |
+| çizgi testi geçmedi | 39 | boş | 9 |
+| yalnız köşe boşluğu | 18 | | |
+| bir yay tutmuş | 16 | | |
+| duvar sayılmış | 0 | | |
+
+- "Aday yok"ların 109'u 200 px'ten geniş (medyan 283 px); boşluk arama
+  200 px'te kesiyordu. 56'sının çevresinde geniş boşluk (150-450) vardı.
+- Geometri hataları görüntüyle: çoğu çift kanatlı pencere. Cevap poligonu
+  boşluk dikdörtgeni + iki kanadın açılma alanı (medyan ~144 × 117 px),
+  bizimki yalnız dikdörtgen (~140 × 43): IoU ~0.40. Tek kanatlı pencerede
+  de cevap dikdörtgen + açılma alanı.
+
+**Varyantlar** (`scripts/aciklik_deney.py`, bayraklar `AciklikKural`'da):
+
+| varyant | pencere D/F/E | K / D / F1 |
+|---|---|---|
+| v0 eski (birebir §8/§11) | 335/89/239 | 0.790 / 0.584 / 0.671 |
+| v4 yalnız tek kanatta dikdörtgen | 340/84/234 | 0.802 / 0.592 / 0.681 |
+| v1 çift kanat | 386/41/188 | 0.904 / 0.672 / 0.771 |
+| v2 çift kanat + dikdörtgen | 391/36/183 | 0.916 / 0.681 / 0.781 |
+| v3 v2 + geniş boşlukta pencere | 439/64/135 | 0.873 / 0.765 / 0.815 |
+| **v5 v3 + geniş boşlukta kısa ayak** | **465/70/109** | **0.869 / 0.810 / 0.839** |
+
+Kapı beş varyantta da 421/10/134. Seçilen v5.
+
+- Çift kanat: iki uçta menteşe, yarıçap yarım genişlik × (0.85-1.06),
+  menteşe yüzde ya da orta çizgide, iki yan; skor iki yayın paylarının
+  küçüğü, eşik kapıyla aynı (0.8).
+- Kısa ayak: geniş boşluk ışını parçaya dönüşmemiş bir duvara (iki pencere
+  arasındaki ayak, köşe çıkıntısı) çarpınca, çarpma noktasında enine duvar
+  genişliği kalınlığın 0.5-1.5 katı (+6 px) ve ışına ortalıysa kabul.
+  Yalnız pencere aramada; oda grafının geniş boşlukları değişmedi.
+
+**Uçtan uca** (`degerlendir.py --stil dolu`): pencere 465/70/109, F1 0.839;
+kutu IoU 369/166/205, K 0.690 / D 0.643 / F1 0.665 (önce 0.493). Duvar ve
+kapı aynı. Oda 394/120/208, F1 0.706 (önce 393/118/209); kenar 121/200/313,
+F1 0.321 (önce 0.322). Plan başına süre medyan 4.2 s.
+
+Bütün stiller (`--stil hepsi`, 86 plan): pencere 465/122/360, F1 0.659
+(önce 0.517); kutu IoU F1 0.523 (önce 0.379). Öteki sayılar §12 ile aynı;
+oda 411/131/454. CSV'ler: `results/degerlendir_gelistirme_pencere.csv`
+(dolu), `results/degerlendir_gelistirme_hepsi_pencere.csv` (hepsi).
+
+**Kalan hatalar** (v5, 465/70/109):
+
+| eksik (109) | | fazla (70) | |
+|---|---|---|---|
+| boşluk var, iki test de geçmedi | 46 | boş | 40 |
+| aday yok | 27 | geometri | 20 |
+| yalnız köşe boşluğu | 17 | cevapta kapı | 10 |
+| geometri | 13 | | |
+| bir yay tutmuş | 6 | | |
+
+- **Garaj kapısı:** "boş" fazlaların 29'u cevapta Parking poligonunun
+  içinde; hepsi geniş boşluktan. Dış duvardaki garaj açıklığı iç yüze
+  oturmuş ince bir panel ve ortada enine çentikle çizilmiş; cevapta ne
+  Door ne Window. Sürgülü pencereden ayrımı panelin açıklıktan birkaç
+  piksel taşması. Kural yazılmadı.
+- Geniş boşluktan gelenler: 74 doğru, 34 fazla. Çizgi sayısı ayırmıyor
+  (2 çizgi: hem doğruların hem fazlaların çoğu); 350 px üstü 4 fazla, 0
+  doğru. Eşik konmadı (dört örnek).
+- Görüntüyle bakılan "iki test de geçmedi" örnekleri: yarı açık çizilmiş
+  tek kanatlı pencere, sabit + kanatlı karma pencere (kanatlar boşluğun bir
+  kısmında, çift kanat varsayımı tutmuyor).

@@ -42,6 +42,16 @@ class AciklikKural:
     pencere_kapsama: float = 0.8  # paralel çizginin boşluk boyunca doluluğu
     pencere_min_cizgi: int = 2
     kose_aci_tol: float = 25.0  # raster köşesi açısı 90 ± bu kadar derece
+    # Çift kanatlı pencere: boşluğun iki ucunda menteşe, yarım genişlikte iki yay.
+    cift_kanat: bool = True
+    # Tek kanatlı pencerenin poligonuna boşluk dikdörtgeni de katılır.
+    kanat_dikdortgen: bool = True
+    # Geniş boşluklarda (genis_bosluklar, 150-450 px) da pencere aranır.
+    # Üçü birlikte geliştirmede pencere F1 0.671 → 0.815 (olcumler §13).
+    genis_pencere: bool = True
+    # Pencere için geniş boşlukta karşı duvar kısa, parçasız bir ayak olabilir.
+    # Geliştirmede pencere F1 0.815 → 0.839 (olcumler §13).
+    genis_kisa_duvar: bool = True
 
 
 VARSAYILAN_ACIKLIK_KURAL = AciklikKural()
@@ -83,22 +93,52 @@ class Kapi:
         return np.vstack([h, h + np.cos(t) * u + np.sin(t) * v])
 
 
+def birlesim_poligonu(poligonlar: list[np.ndarray], olcek: int = 4) -> np.ndarray:
+    """Poligonların birleşiminin dış hattı (1/``olcek`` px raster üstünden);
+    birleşim parçalıysa en büyük parça."""
+    hepsi = np.vstack(poligonlar)
+    x0, y0 = np.floor(hepsi.min(0)) - 2
+    x1, y1 = np.ceil(hepsi.max(0)) + 2
+    m = np.zeros((int((y1 - y0) * olcek) + 1, int((x1 - x0) * olcek) + 1), np.uint8)
+    for p in poligonlar:  # tek tek: fillPoly çoklu poligonda tek-çift kuralı uygular
+        cv2.fillPoly(m, [np.round((p - [x0, y0]) * olcek).astype(np.int32)], 1)
+    hatlar, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    h = cv2.approxPolyDP(max(hatlar, key=cv2.contourArea), 1.0, True)[:, 0, :]
+    return h / olcek + np.array([x0, y0])
+
+
 @dataclass(frozen=True)
 class Pencere:
-    """Boşlukta paralel çizgiler (``cizgi``) ya da kanatlı pencere (``kanat``:
-    küçük yarıçaplı yay; poligon açılma alanı, cevaptaki gibi)."""
+    """Boşlukta paralel çizgiler (``cizgi``), kanatlı pencere (``kanat``: küçük
+    yarıçaplı yay) ya da çift kanatlı pencere (``kanatlar``: iki uçta yarım
+    genişlikte birer yay).
+
+    Poligon: kanatsızda boşluk dikdörtgeni; tek kanatta açılma alanı, ya da
+    ``dikdortgen`` ise dikdörtgenle birleşimi; çift kanatta her zaman
+    dikdörtgen + iki açılma alanı (cevaptaki gibi, olcumler §13)."""
 
     bosluk: Bosluk
     cizgi: int = 0
     kanat: Kapi | None = None
+    kanatlar: tuple[Kapi, ...] = ()
+    dikdortgen: bool = False
 
-    def poligon(self) -> np.ndarray:
-        if self.kanat is not None:
-            return self.kanat.poligon()
+    def dikdortgen_poligon(self) -> np.ndarray:
         a, b = np.array(self.bosluk.a), np.array(self.bosluk.b)
         d = (b - a) / max(np.linalg.norm(b - a), 1e-9)
         n = np.array([-d[1], d[0]]) * self.bosluk.kalinlik / 2
         return np.array([a + n, b + n, b - n, a - n])
+
+    def poligon(self) -> np.ndarray:
+        if self.kanatlar:
+            return birlesim_poligonu(
+                [k.poligon() for k in self.kanatlar] + [self.dikdortgen_poligon()]
+            )
+        if self.kanat is not None:
+            if self.dikdortgen and self.bosluk.kalinlik > 0:
+                return birlesim_poligonu([self.kanat.poligon(), self.dikdortgen_poligon()])
+            return self.kanat.poligon()
+        return self.dikdortgen_poligon()
 
 
 def duvar_etiketi(parcalar: list[Parca], duvar_maske: np.ndarray) -> np.ndarray:
@@ -184,16 +224,43 @@ def bosluklar(
     return bulunan
 
 
+def _hizali_kisa_duvar(
+    duvar_maske: np.ndarray, nokta: np.ndarray, yon: np.ndarray, kalinlik: float
+) -> bool:
+    """Işının çarptığı duvar, ışının geldiği duvarla hizalı kısa bir parça mı
+    (iki pencere arasındaki ayak gibi): çarpma noktasının 2 px içinde enine
+    duvar genişliği ``kalinlik``'a yakın ve ışına ortalı. Dik duvar enine
+    boyunca uzandığı için geçemez."""
+    n = np.array([-yon[1], yon[0]])
+    q = nokta + 2 * yon
+    sinir = 2 * kalinlik + 10
+    t = np.arange(0, sinir + 1, 1.0)
+    uzanim = []
+    for s in (n, -n):
+        ic = _isabet(duvar_maske, q + t[:, None] * s)
+        disari = np.flatnonzero(~ic)
+        if len(disari) == 0:
+            return False
+        uzanim.append(t[disari[0]])
+    genislik = uzanim[0] + uzanim[1]
+    kayma = abs(uzanim[0] - uzanim[1]) / 2
+    return 0.5 * kalinlik <= genislik <= 1.5 * kalinlik + 6 and kayma <= kalinlik / 2 + 4
+
+
 def genis_bosluklar(
     parcalar: list[Parca],
     duvar_maske: np.ndarray,
     min_genislik: float = 150.0,
     max_genislik: float = 450.0,
+    kisa_duvar: bool = False,
 ) -> list[Bosluk]:
     """Kapı boyundan geniş açıklıklar (garaj kapısı, porte-fenêtre): yalnız
     karşıdaki duvar aynı doğrultuda sürüyorsa. Işın odanın karşı duvarına
     çarpmasın diye karşı duvar bu parçayla ≤ 10° ve orta çizgisi ≤ yarım
-    kalınlık + 4 px uzakta olmalı. Oda bölme ve bina sınırı için."""
+    kalınlık + 4 px uzakta olmalı. Oda bölme ve bina sınırı için.
+
+    ``kisa_duvar``: karşıdaki duvar parçaya dönüşmemiş ya da öyle görünmüyorsa
+    (kısa ayak, köşe çıkıntısı) ``_hizali_kisa_duvar`` testi de kabul edilir."""
     kural = AciklikKural(min_genislik=min_genislik, max_genislik=max_genislik)
     etiket = duvar_etiketi(parcalar, duvar_maske)
     h, w = duvar_maske.shape
@@ -214,13 +281,19 @@ def genis_bosluklar(
             xi = min(max(int(np.floor(gb[0] + 0.5 + yon[0])), 0), w - 1)
             yi = min(max(int(np.floor(gb[1] + 0.5 + yon[1])), 0), h - 1)
             e = etiket[yi, xi]
-            if e <= 0 or e == i + 1:
+            if e == 0 or e == i + 1:
                 continue
-            q = parcalar[e - 1]
-            if aci_farki(q.aci, p.aci) > math.radians(10):
-                continue
-            q_orta = (np.array([q.x1, q.y1]) + np.array([q.x2, q.y2])) / 2
-            if abs((q_orta - a) @ n) > max(p.kalinlik, q.kalinlik) / 2 + 4:
+            hizali = False
+            if e > 0:
+                q = parcalar[e - 1]
+                q_orta = (np.array([q.x1, q.y1]) + np.array([q.x2, q.y2])) / 2
+                hizali = (
+                    aci_farki(q.aci, p.aci) <= math.radians(10)
+                    and abs((q_orta - a) @ n) <= max(p.kalinlik, q.kalinlik) / 2 + 4
+                )
+            if not hizali and not (
+                kisa_duvar and _hizali_kisa_duvar(duvar_maske, gb, yon, p.kalinlik)
+            ):
                 continue
             yeni = Bosluk(tuple(map(float, ga)), tuple(map(float, gb)), p.kalinlik)
             orta = (ga + gb) / 2
@@ -330,6 +403,39 @@ def kapi_dene(
     return en_iyi if en_iyi is not None and en_iyi.skor > 0 else None
 
 
+def cift_kanat_dene(bosluk: Bosluk, murekkep: np.ndarray) -> tuple[Kapi, Kapi] | None:
+    """Çift kanatlı pencere: menteşeler boşluğun iki ucunda, iki kanat aynı
+    yana açılır ve ortada buluşur (yarıçap yarım genişlik). Açılma yanı,
+    menteşenin yüze göre yeri ve yarıçap ``kapi_dene``'deki gibi taranır.
+    Skor iki yayın paylarının küçüğü; hiç pay yoksa None."""
+    a, b = np.array(bosluk.a), np.array(bosluk.b)
+    g = np.linalg.norm(b - a)
+    d = (b - a) / max(g, 1e-9)
+    n0 = np.array([-d[1], d[0]])
+    en_iyi = None
+    for n in (n0, -n0):
+        for kaydir in (bosluk.kalinlik / 2, 0.0):
+            for olcek in (0.85, 0.92, 1.0, 1.06):
+                r = olcek * g / 2
+                kanatlar = []
+                for h, u in ((a + kaydir * n, d), (b + kaydir * n, -d)):
+                    yay = h + r * (np.cos(_TAM_TETA)[:, None] * u + np.sin(_TAM_TETA)[:, None] * n)
+                    kanatlar.append((h, u, _pay(murekkep, yay)))
+                skor = min(k[2] for k in kanatlar)
+                if en_iyi is None or skor > en_iyi[0].skor:
+                    en_iyi = tuple(
+                        Kapi(
+                            tuple(map(float, h)),
+                            tuple(map(float, h + r * u)),
+                            tuple(map(float, h + r * n)),
+                            skor,
+                            bosluk,
+                        )
+                        for h, u, _ in kanatlar
+                    )
+    return en_iyi if en_iyi is not None and en_iyi[0].skor > 0 else None
+
+
 def pencere_dene(bosluk: Bosluk, murekkep_ham: np.ndarray, kural: AciklikKural) -> Pencere | None:
     """Boşluğun %10-%90'ı boyunca, duvar kalınlığı içindeki her enine
     ofsette (1 px adım) mürekkep kapsaması; kapsaması yüksek ardışık ofset
@@ -432,6 +538,11 @@ def aciklik_bul(
     2. Yarıçapı ``kapi_min_yaricap``'tan büyük yay kapı, küçük yay kanatlı pencere.
     3. Yaylardan biriyle örtüşmeyen parça boşlukları paralel çizgili pencere
        diye denenir (köşe boşluklarında denemek fazla pencereyi artırdı).
+
+    ``kural.cift_kanat``: parça boşluklarında çift kanat da denenir; skoru
+    eşiği ve tek yayın skorunu geçerse çift kanatlı pencere. ``genis_pencere``:
+    açıklıklarla örtüşmeyen geniş boşluklarda (150-450 px) çift kanat ve
+    paralel çizgi denenir.
     """
     murekkep = ince_murekkep(ikili, duvar_maske, kural.yay_tol)
     parca_bosluk = bosluklar(parcalar, duvar_maske, kural)
@@ -439,6 +550,7 @@ def aciklik_bul(
     if kapi_yontemi == "bosluk_kose":
         adaylar += kose_bosluklari(duvar_maske, kural)
     yaylar = []
+    ciftler: list[Pencere] = []
     for bo in adaylar:
         kismi_esik = kural.kismi_esik
         # Pencere çerçevesi kısa kısmi yayla ve kanatla karışıyor (olcumler §11):
@@ -457,20 +569,59 @@ def aciklik_bul(
             kural.kismi_acilar,
             kural.kismi_kanat_yan,
         )
+        if kural.cift_kanat and bo.kalinlik > 0:
+            c = cift_kanat_dene(bo, murekkep)
+            if c is not None and c[0].skor >= kural.yay_esik and (k is None or c[0].skor >= k.skor):
+                ciftler.append(Pencere(bo, kanatlar=c))
+                continue
         if k is not None and k.skor >= kural.yay_esik:
             yaylar.append(k)
-    yaylar = kapi_bastir(yaylar)
+    cift_poligon = [p.poligon().astype(np.float32) for p in ciftler]
+    # Çift kanatlı pencerenin içinde kalan tek yay onun bir kanadı.
+    yaylar = [
+        k
+        for k in kapi_bastir(yaylar)
+        if not any(
+            cv2.pointPolygonTest(cp, tuple(map(float, k.poligon().mean(0))), False) >= 0
+            for cp in cift_poligon
+        )
+    ]
     kapilar = [k for k in yaylar if k.yaricap >= kural.kapi_min_yaricap]
-    pencereler = [Pencere(k.bosluk, kanat=k) for k in yaylar if k.yaricap < kural.kapi_min_yaricap]
-    poligonlar = [k.poligon().astype(np.float32) for k in yaylar]
+    pencereler = [
+        Pencere(k.bosluk, kanat=k, dikdortgen=kural.kanat_dikdortgen)
+        for k in yaylar
+        if k.yaricap < kural.kapi_min_yaricap
+    ]
+    pencereler += ciftler
+    poligonlar = [k.poligon().astype(np.float32) for k in yaylar] + cift_poligon
+
+    def ortulu(bo: Bosluk) -> bool:
+        orta = ((bo.a[0] + bo.b[0]) / 2, (bo.a[1] + bo.b[1]) / 2)
+        return any(
+            cv2.pointPolygonTest(p, orta, True) >= -(bo.kalinlik / 2 + 2) for p in poligonlar
+        )
+
     kalan = []
     for bo in parca_bosluk:
-        orta = ((bo.a[0] + bo.b[0]) / 2, (bo.a[1] + bo.b[1]) / 2)
-        if any(cv2.pointPolygonTest(p, orta, True) >= -(bo.kalinlik / 2 + 2) for p in poligonlar):
+        if ortulu(bo):
             continue
         p = pencere_dene(bo, ikili, kural)
         if p is not None:
             pencereler.append(p)
         else:
             kalan.append(bo)
+    if kural.genis_pencere:
+        poligonlar += [p.poligon().astype(np.float32) for p in pencereler]
+        for bo in genis_bosluklar(parcalar, duvar_maske, kisa_duvar=kural.genis_kisa_duvar):
+            if ortulu(bo):
+                continue
+            c = cift_kanat_dene(bo, murekkep) if kural.cift_kanat else None
+            p = (
+                Pencere(bo, kanatlar=c)
+                if c is not None and c[0].skor >= kural.yay_esik
+                else pencere_dene(bo, ikili, kural)
+            )
+            if p is not None:
+                pencereler.append(p)
+                poligonlar.append(p.poligon().astype(np.float32))
     return kapilar, pencereler, kalan
