@@ -35,9 +35,7 @@ Sayılar `docs/olcumler.md`'den elle girildi (§16 geliştirme, §17 test);
 - Demo: `uv run python scripts/demo.py --cvcfp IIa_LZ1101` (sunumdaki
   plan). Sunumdan önce bir kez çalıştırılmalı.
 
-## Açık
+## Sürümler
 
-- Yazar bloğunda yalnız Ömer Can var; ekip üyeleri eklenecek (rapor ve
-  sunum kapağı).
-- Sunumun son slaytında özel deponun adresi var: sunmadan önce erişim ver
-  ya da satırı kaldır.
+Buradaki rapor tek yazarlı (Ömer Can Atlı). Derse teslim edilen sürüm aynı
+metnin ekip yazar bloğuyla derlenmiş hâli; repo dışında tutuluyor.
