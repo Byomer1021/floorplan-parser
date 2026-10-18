@@ -39,6 +39,16 @@ class AciklikKural:
     kismi_pencerede: bool = True  # False: pencere çizgisi taşıyan boşlukta kısmi yok
     kismi_kanat_yan: float = 0.3  # kanadın 7 px yanında mürekkep payı en çok
     yay_tol: float = 3.0  # örnek noktanın mürekkebe en çok uzaklığı (px)
+    # Kapı yayı yarıçapı / boşluk genişliği taraması. Adım ~2 × yay_tol'dan
+    # büyükse doğru yarıçap atlanabiliyor (olcumler §15).
+    yaricap_olcekleri: tuple[float, ...] = (0.85, 0.92, 1.0, 1.06)
+    # Kavşaktaki uçtan dik duvar yüzüne boşluklar da yay adayı (T-kavşağı kapısı).
+    # Geliştirmede kapı +3 doğru, fazla aynı (olcumler §15).
+    kavsak_aday: bool = True
+    # Ek ölçekler yalnız yarıçap ≥ kapi_min_yaricap (kapı boyu) iken denenir:
+    # kanatlı pencerede ince tarama pencere çizgisini yaya çeviriyor.
+    # Geliştirmede kapı F1 0.854 → 0.881, pencere aynı (olcumler §15).
+    kapi_ek_olcekleri: tuple[float, ...] = (0.83, 0.87, 0.91, 0.95, 0.99, 1.03, 1.07)
     pencere_kapsama: float = 0.8  # paralel çizginin boşluk boyunca doluluğu
     pencere_min_cizgi: int = 2
     kose_aci_tol: float = 25.0  # raster köşesi açısı 90 ± bu kadar derece
@@ -210,6 +220,7 @@ def bosluklar(
     kural: AciklikKural = VARSAYILAN_ACIKLIK_KURAL,
     yalniz_hizali: bool = False,
     yan_suzgec: str = "",
+    kavsak_serbest: bool = False,
 ) -> list[Bosluk]:
     """Duvar uçlarından boşluk adayları.
 
@@ -227,6 +238,10 @@ def bosluklar(
     (iki yanda da duvar: ``"aa"`` ikisi de aralıklı, ``"duvarli"`` aralıklı ya
     da bitişik) boşluk atlanır; T-kavşağında iki yanı kapılı koridor duvarı
     gibi. Yalnız oda bölme için (olcumler §14).
+
+    ``kavsak_serbest``: kavşaktaki uçta da karşıdaki herhangi bir duvar kabul
+    (T-kavşağının dibindeki kapı, iki dik yüz arasında). Yalnız yay testi
+    adayı olarak (olcumler §15); oda bölmede ve pencere testinde kullanılmaz.
     """
     etiket = duvar_etiketi(parcalar, duvar_maske)
     h, w = duvar_maske.shape
@@ -247,9 +262,11 @@ def bosluklar(
                 xi = min(max(int(np.floor(gb[0] + 0.5 + yon[0])), 0), w - 1)
                 yi = min(max(int(np.floor(gb[1] + 0.5 + yon[1])), 0), h - 1)
                 e = etiket[yi, xi]
-            if kavsak:
+            if kavsak and not kavsak_serbest:
                 if e <= 0 or e == i + 1 or aci_farki(parcalar[e - 1].aci, p.aci) > math.radians(10):
                     continue
+            elif kavsak and e == i + 1:
+                continue
             elif yalniz_hizali and e > 0:
                 q = parcalar[e - 1]
                 q_orta = (np.array([q.x1, q.y1]) + np.array([q.x2, q.y2])) / 2
@@ -403,6 +420,11 @@ def kapi_dene(
     kismi_min_yaricap: float = 0.0,
     kismi_acilar: tuple[float, ...] = KISMI_ACILAR,
     kismi_kanat_yan: float = 0.3,
+    olcekler: tuple[float, ...] = (0.85, 0.92, 1.0, 1.06),
+    ek_olcekler: tuple[float, ...] = (),
+    ek_min_yaricap: float = 0.0,
+    kismi_kayit: list | None = None,
+    kayit_esik: float = 1.01,
 ) -> Kapi | None:
     """Dört varsayımın (menteşe iki uçtan biri, açılma iki yandan biri) en
     iyisi; yarıçap ve menteşenin yüze göre yeri küçük aralıkta taranır.
@@ -413,19 +435,25 @@ def kapi_dene(
     kanıt: kanat olmadan, ``kismi_esik``'in altında ve ``kismi_min_yaricap``'tan
     küçük yarıçapta sayılmaz (varsayılan: hiç sayılmaz). Hiçbir varsayımda
     pay yoksa None.
+
+    ``kismi_kayit`` verilirse, ``kayit_esik``'i geçen en iyi yarı açık
+    varsayım, dönen sonuçtan iyiyse oraya eklenir (dönüş değişmez). Oda bölme
+    için yarı açık kapıları ikinci bir tarama yapmadan toplamak içindir.
     """
     a, b = np.array(bosluk.a), np.array(bosluk.b)
     g = np.linalg.norm(b - a)
     d = (b - a) / max(g, 1e-9)
     n0 = np.array([-d[1], d[0]])
     en_iyi = None
+    en_iyi_kismi = None
     for h0, j0 in ((a, b), (b, a)):
         u = (j0 - h0) / g
         for n in (n0, -n0):
             # Menteşe duvarın açılma yanındaki yüzünde ya da orta çizgide.
             for kaydir in (bosluk.kalinlik / 2, 0.0):
                 h = h0 + kaydir * n
-                for olcek in (0.85, 0.92, 1.0, 1.06):
+                ekler = tuple(e for e in ek_olcekler if e * g >= ek_min_yaricap)
+                for olcek in olcekler + ekler:
                     r = olcek * g
                     yay = h + r * (np.cos(_TAM_TETA)[:, None] * u + np.sin(_TAM_TETA)[:, None] * n)
                     secenek = [(_pay(murekkep, yay), 90.0)]
@@ -445,6 +473,20 @@ def kapi_dene(
                         yan = max(_pay(murekkep, kanat + 7 * dik), _pay(murekkep, kanat - 7 * dik))
                         if kismi >= kismi_esik and yan <= kismi_kanat_yan:
                             secenek.append((kismi, phi))
+                        if (
+                            kismi_kayit is not None
+                            and kismi >= kayit_esik
+                            and yan <= kismi_kanat_yan
+                            and (en_iyi_kismi is None or kismi > en_iyi_kismi.skor)
+                        ):
+                            en_iyi_kismi = Kapi(
+                                tuple(map(float, h)),
+                                tuple(map(float, h + r * u)),
+                                tuple(map(float, h + r * n)),
+                                kismi,
+                                bosluk,
+                                phi,
+                            )
                     skor, aci = max(secenek)
                     if en_iyi is None or skor > en_iyi.skor:
                         en_iyi = Kapi(
@@ -455,6 +497,8 @@ def kapi_dene(
                             bosluk,
                             aci,
                         )
+    if en_iyi_kismi is not None and (en_iyi is None or en_iyi_kismi.skor > en_iyi.skor):
+        kismi_kayit.append(en_iyi_kismi)
     return en_iyi if en_iyi is not None and en_iyi.skor > 0 else None
 
 
@@ -584,8 +628,15 @@ def aciklik_bul(
     duvar_maske: np.ndarray,
     kural: AciklikKural = VARSAYILAN_ACIKLIK_KURAL,
     kapi_yontemi: str = "bosluk_kose",
+    kismi_kayit: list | None = None,
+    kismi_kayit_esik: float = 0.95,
 ) -> tuple[list[Kapi], list[Pencere], list[Bosluk]]:
     """(kapılar, pencereler, sınıflanmamış boşluklar).
+
+    ``kismi_kayit`` verilirse, kapı listesine girmeyen yarı açık kapılar
+    (pay ≥ ``kismi_kayit_esik``, pencere çizgisi taşımayan boşlukta, kapı
+    boyunda, örtüşen yaylarla bastırılmış) oraya eklenir. Oda bölmede kiriş
+    için; ayrı bir yarı açık tarama ile aynı sonucu tek geçişte verir.
 
     1. Yay: parça uçlarından bulunan boşluklarda (``kapi_yontemi``
        "bosluk_kose" ise raster köşelerinden bulunanlarda da) dört menteşe
@@ -604,18 +655,26 @@ def aciklik_bul(
     adaylar = list(parca_bosluk)
     if kapi_yontemi == "bosluk_kose":
         adaylar += kose_bosluklari(duvar_maske, kural)
+    yalniz_yay: set[Bosluk] = set()
+    if kural.kavsak_aday:
+        var = set(parca_bosluk)
+        yalniz_yay = {
+            b for b in bosluklar(parcalar, duvar_maske, kural, kavsak_serbest=True) if b not in var
+        }
+        adaylar += sorted(yalniz_yay, key=lambda b: (b.a, b.b))
     yaylar = []
+    kismi_aday: list[Kapi] = []
     ciftler: list[Pencere] = []
     for bo in adaylar:
         kismi_esik = kural.kismi_esik
         # Pencere çerçevesi kısa kısmi yayla ve kanatla karışıyor (olcumler §11):
         # paralel pencere çizgisi taşıyan boşlukta yalnız tam yay.
-        if (
-            kismi_esik <= 1.0
-            and not kural.kismi_pencerede
-            and pencere_dene(bo, ikili, kural) is not None
-        ):
+        pencereli = None
+        if (kismi_esik <= 1.0 and not kural.kismi_pencerede) or kismi_kayit is not None:
+            pencereli = pencere_dene(bo, ikili, kural) is not None
+        if kismi_esik <= 1.0 and not kural.kismi_pencerede and pencereli:
             kismi_esik = 1.01
+        kayit = [] if kismi_kayit is not None and not pencereli else None
         k = kapi_dene(
             bo,
             murekkep,
@@ -623,15 +682,39 @@ def aciklik_bul(
             kural.kapi_min_yaricap,
             kural.kismi_acilar,
             kural.kismi_kanat_yan,
+            kural.yaricap_olcekleri,
+            kural.kapi_ek_olcekleri,
+            kural.kapi_min_yaricap,
+            kayit,
+            kismi_kayit_esik,
         )
-        if kural.cift_kanat and bo.kalinlik > 0:
+        c = None
+        if kural.cift_kanat and bo.kalinlik > 0 and bo not in yalniz_yay:
             c = cift_kanat_dene(bo, murekkep)
-            if c is not None and c[0].skor >= kural.yay_esik and (k is None or c[0].skor >= k.skor):
-                ciftler.append(Pencere(bo, kanatlar=c))
-                continue
+            if c is not None and c[0].skor < kural.yay_esik:
+                c = None
+        # Yarı açık kayıt: çift kanat ondan iyi değilse (ayrı taramadaki seçim).
+        if kayit and (c is None or c[0].skor < kayit[0].skor):
+            kismi_aday.extend(kayit)
+        if c is not None and (k is None or c[0].skor >= k.skor):
+            ciftler.append(Pencere(bo, kanatlar=c))
+            continue
         if k is not None and k.skor >= kural.yay_esik:
             yaylar.append(k)
     cift_poligon = [p.poligon().astype(np.float32) for p in ciftler]
+    if kismi_kayit is not None:
+        # Ayrı taramadaki gibi: tam ve yarı açık yaylar birlikte bastırılır,
+        # kalan yarı açıklar (kapı boyunda, çift kanatlının içinde değil) kayda.
+        for k in kapi_bastir(yaylar + kismi_aday):
+            if (
+                k.aci < 90
+                and k.yaricap >= kural.kapi_min_yaricap
+                and not any(
+                    cv2.pointPolygonTest(cp, tuple(map(float, k.poligon().mean(0))), False) >= 0
+                    for cp in cift_poligon
+                )
+            ):
+                kismi_kayit.append(k)
     # Çift kanatlı pencerenin içinde kalan tek yay onun bir kanadı.
     yaylar = [
         k

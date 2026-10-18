@@ -200,6 +200,28 @@ aynı; oda ve kenar F1 ±0.001.
 geniş boşlukta pencere bulunuyor: 29 fazla. Sürgülü pencereden ayrımı
 birkaç piksellik taşmaya dayanıyor; kural yazılmadı.
 
+**2026-10-18, kapı üçüncü tur** ([olcumler §15](olcumler.md)): kaçan 134
+kapının 89'unda iki yanındaki odalar bizde tek bölgeydi. Kapı, oda ve kenar
+için asıl kaldıraç. Eklenenler:
+
+- Kapı boyunda (yarıçap ≥ 75 px) ince yarıçap taraması: boşluğun 0.83-1.07
+  katı, 0.04 adımla, eski 4 değere ek. Eski adım (~7 px) örnek noktası
+  toleransının (3 px) iki katından büyüktü. Kalınlığı 0 olan köşe adayında
+  menteşe kaydırma seçeneği de olmadığından doğru yarıçap atlanıyordu.
+  Pencere boyunda ince tarama kanatlı pencereyi bozduğu için yalnız kapı
+  boyunda.
+- Kavşaktaki uçtan dik duvar yüzüne boşluklar yalnız yay adayı (T-kavşağı
+  kapısı). Oda kirişi ve pencere testi olarak kullanılmıyor.
+- Yarı açık kapılar ayrı bir tarama yerine aynı taramada kaydediliyor
+  (61/62 planda aynı küme). Süre 8.6 → 6.1 s.
+
+Geliştirmede kapı F1 0.854 → 0.885 (K 0.958, D 0.822), oda F1 0.734 →
+0.760, kenar F1 0.343 → 0.386; pencere F1 0.839 → 0.840.
+
+**Kalan:** eğik (45°) kısa duvarlar ve bazı ince bölme duvarlar duvar
+maskesine girmiyor, kapıları aday bile olmuyor (34 kapı, 26'sı oda
+birleştiriyor). Bu duvar adımının işi.
+
 **Sınırlar:** piksel eşikleri (40-200, 75) CVC-FP I-II ölçeğine bağlı;
 porte-fenêtre ve kanatlı pencere cevapta Window, sistemde yarıçapa göre
 ayrılıyor; yarı açık çizilmiş kapıların çoğu kaçıyor.

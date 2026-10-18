@@ -767,3 +767,92 @@ açık kapı için ikinci açıklık taraması). Bütün stiller (86 plan): oda
   çizilmiş oda (ayak izi o tarafta kapanmıyor), geniş camla terasa açılan
   oturma alanı.
 - Oda duyarlılığının tavanı (duvarsız ayrım): (602 - 93) / 602 ≈ 0.85.
+
+## §15 Kapı: ince yarıçap taraması, T-kavşağı adayı (2026-10-18)
+
+Geliştirme, I-II dolu duvarlı 62 plan; cevapta 555 kapı. Başlangıç (§14):
+kapı 421/10/134, F1 0.854.
+
+**Hata sınıflandırması** (`scripts/aciklik_hata.py`, artık `plani_coz` ile;
+yeni sütunlar: kapının iki yanındaki cevap odaları bizde aynı bölgede mi,
+yarı açık varsayımında pay, duvar açısı):
+
+| eksik (134) | toplam | oda birleştiren |
+|---|---|---|
+| aday var, yay zayıf (< 0.8) | 95 | 60 |
+| aday yok | 35 | 27 |
+| geometri | 3 | 2 |
+| diğer | 1 | 0 |
+
+- Kaçan kapıların 89'u oda birleşmesiyle aynı yerde; 37'si 10°'den eğik
+  duvarda.
+- "Yay zayıf"ların payı 0.3-0.8 arasına yayılmış (0.75-0.8 yalnız 13).
+  Yarı açık varsayımında ≥ 0.95 olan 19.
+- Tek kapı ayrıntılı (BK0701, köşe adayı, kalınlık 0): gerçek yarıçap
+  88 px, tarama 84 / 91 / 99 / 105 px deniyor. Payı 88'de 1.0, 91'de
+  0.62. Örnek noktası toleransı 3 px, tarama adımı ~7 px. Köşe adayında
+  menteşe kaydırma seçeneği de yok.
+- Görüntüyle öteki tipler: yarı açık WC kapısı; eğik (45°) kısa duvar ya da
+  ince bölme duvar duvar maskesine girmemiş, kapının adayı yok; T-kavşağının
+  dibindeki kapı (iki dik yüz arası) aday üretilmiyor.
+
+**Yarıçap taraması** (`aciklik_deney.py`, `--olcekler` / `--ek-olcekler`):
+
+| tarama | kapı D/F/E | kapı K / D / F1 | pencere D/F/E | pencere F1 |
+|---|---|---|---|---|
+| y0 0.85, 0.92, 1.0, 1.06 (eski) | 421/10/134 | 0.977 / 0.759 / 0.854 | 465/70/109 | 0.839 |
+| y1 0.83-1.07 adım 0.04, bütün yaylar | 451/17/104 | 0.964 / 0.813 / 0.882 | 451/67/123 | 0.826 |
+| y2 0.80-1.10 adım 0.03 | 452/21/103 | 0.956 / 0.814 / 0.879 | 456/63/118 | 0.834 |
+| y3 0.80-1.10 adım 0.02 | 453/23/102 | 0.952 / 0.816 / 0.879 | 459/62/115 | 0.838 |
+| **z1 eski + 0.83-1.07 adım 0.04 yalnız yarıçap ≥ 75** | **453/20/102** | **0.958 / 0.816 / 0.881** | 458/59/116 | **0.840** |
+| z2 eski + 0.80-1.10 adım 0.03 yalnız ≥ 75 | 452/22/103 | 0.954 / 0.814 / 0.879 | 456/59/118 | 0.837 |
+
+y1'de pencerenin kaybı (`pencere_hata.py` farkı): 17 yeni fazla tek kanatlı
+pencere (yanlış geometri), 7 yeni eksik. İnce tarama küçük yayda çizgili
+pencereyi kanatlıya çeviriyor; z1 bunu yalnız kapı boyunda yaparak
+önlüyor. §8'deki "örnekleme incelince fazla kapı patlar" burada olmadı
+(10 → 20): orada yay üstündeki örnek sayısı artmıştı, burada yarıçap
+adımı inceldi.
+
+**T-kavşağı adayı** (`kavsak_aday`): kavşaktaki uçta dik duvar yüzüne
+çarpan boşluk yalnız yay testine aday (oda kirişi ve pencere testi değil).
+z1 üstüne kapı 453/20/102 → 456/20/99, pencere aynı.
+
+**Tek geçiş:** oda bölme için yarı açık kapılar (§14) ayrı bir açıklık
+taraması yerine aynı taramada kaydediliyor (`aciklik_bul(kismi_kayit=...)`).
+62 planın 61'inde aynı yarı açık kapı kümesi; birinde ayrı tarama bir kapı
+fazla buluyor. Adım süreleri (4 plan, tek koşu): açıklık 3.4 s, ayrı yarı
+açık tarama 3.3 s, oda 2.1 s, duvar 1.6 s.
+
+**Uçtan uca** (`degerlendir.py`, tek başına koşu):
+
+| | §14 | z1 (ayrı yarı açık tarama) | z1 + T-kavşağı + tek geçiş |
+|---|---|---|---|
+| kapı D/F/E | 421/10/134 | 453/20/102 | 456/20/99 |
+| kapı K / D / F1 | 0.977 / 0.759 / 0.854 | 0.958 / 0.816 / 0.881 | 0.958 / 0.822 / 0.885 |
+| pencere F1 | 0.839 | 0.840 | 0.840 |
+| oda D/F/E | 392/74/210 | 407/72/195 | 414/73/188 |
+| oda K / D / F1 | 0.841 / 0.651 / 0.734 | 0.850 / 0.676 / 0.753 | 0.850 / 0.688 / 0.760 |
+| kenar D/F/E | 129/189/305 | 140/190/294 | 148/184/286 |
+| kenar F1 | 0.343 | 0.366 | 0.386 |
+| süre medyan | 5.3 s | 8.6 s | 6.1 s |
+
+Kutu IoU'lu kapı F1 0.858 → 0.888 (K 0.962, D 0.825), pencere 0.665 →
+0.676 (K 0.714, D 0.643).
+
+Bütün stiller (86 plan): kapı 460/25/328, F1 0.723 (önce 0.693; kutu K
+0.953 / D 0.586); pencere F1 0.657 (kutu 0.529); oda 433/79/432, F1 0.629
+(önce 0.607); kenar F1 0.306 (önce 0.271).
+
+**Kalan kapı hataları** (z1 + T-kavşağı, 456/20/99):
+
+| eksik (99) | toplam | oda birleştiren |
+|---|---|---|
+| yay zayıf | 62 | 20 |
+| aday yok | 34 | 26 |
+| geometri | 2 | 1 |
+| diğer | 1 | 0 |
+
+Fazla (20): cevapta pencere 10, boş 6, geometri 4. Oda birleştiren
+kaçakların çoğu artık "aday yok": eğik kısa duvar ve ince bölme duvar duvar
+maskesinde yok. Bu duvar adımının işi.

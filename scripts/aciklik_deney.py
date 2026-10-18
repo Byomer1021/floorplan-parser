@@ -58,6 +58,13 @@ def main() -> None:
     ap.add_argument(
         "--genis-kisa-duvar", type=int, default=int(VARSAYILAN_ACIKLIK_KURAL.genis_kisa_duvar)
     )
+    ap.add_argument(
+        "--olcekler",
+        default="",
+        help="yarıçap/genişlik taraması, ör. 0.83:1.07:0.04 (baş:son:adım) ya da 0.85,0.92",
+    )
+    ap.add_argument("--ek-olcekler", default="", help="kapı boyunda ek ölçekler, --olcekler gibi")
+    ap.add_argument("--kavsak-aday", type=int, default=int(VARSAYILAN_ACIKLIK_KURAL.kavsak_aday))
     ap.add_argument("--etiket", default="")
     a = ap.parse_args()
     kural = replace(
@@ -71,7 +78,20 @@ def main() -> None:
         kanat_dikdortgen=bool(a.kanat_dikdortgen),
         genis_pencere=bool(a.genis_pencere),
         genis_kisa_duvar=bool(a.genis_kisa_duvar),
+        kavsak_aday=bool(a.kavsak_aday),
     )
+
+    def olcek_oku(metin: str) -> tuple[float, ...]:
+        if ":" in metin:
+            bas, son, adim = (float(x) for x in metin.split(":"))
+            return tuple(round(v, 3) for v in np.arange(bas, son + adim / 2, adim))
+        return tuple(float(x) for x in metin.split(","))
+
+    if a.olcekler:
+        kural = replace(kural, yaricap_olcekleri=olcek_oku(a.olcekler))
+    if a.ek_olcekler:
+        kural = replace(kural, kapi_ek_olcekleri=olcek_oku(a.ek_olcekler))
+    print("yarıçap ölçekleri:", kural.yaricap_olcekleri, "ek:", kural.kapi_ek_olcekleri, flush=True)
 
     satirlar = []
     t_basla = time.perf_counter()

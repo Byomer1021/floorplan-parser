@@ -62,6 +62,26 @@ def test_kucuk_yay_kanatli_pencere_sayilir():
     assert np.array_equal(k.poligon(), k.kanat.poligon())
 
 
+def test_ince_yaricap_taramasi_kayik_yayi_bulur():
+    # Boşluk 120 px, yay yarıçapı 97 (0.81 ×): kaba tarama (0.85 × en küçük)
+    # menteşe kaydırmasıyla bile tutturamaz; kapı boyundaki ek ölçekler
+    # (0.83 ×) yakalar. Sentetik ince duvarda kaba taramanın kaçırdığı tek
+    # aralık bu alt uç; gerçek planda kalınlıksız köşe adaylarında aralar da
+    # kaçıyor (olcumler §15).
+    plan = plan_ciz(kapi_genislik=120)
+    mx, my = plan.kapilar[0].mentese
+    cv2.ellipse(plan.goruntu, (mx, my), (120, 120), 0, 0, 90, 255, 4)
+    cv2.ellipse(plan.goruntu, (mx, my), (97, 97), 0, 0, 90, 0, 2)
+    ikili = delik_doldur(ikile(plan.goruntu), 4)
+    kalin, kalin_p, ince_p = iki_olcekli_duvarlar(ikili, k_kalin=5)
+    duvar = np.maximum(kalin, parca_maskesi(ince_p, ikili.shape))
+    parcalar = kalin_p + ince_p
+    kaba, _, _ = aciklik_bul(ikili, parcalar, duvar, AciklikKural(kapi_ek_olcekleri=()))
+    assert kaba == []
+    ince, _, _ = aciklik_bul(ikili, parcalar, duvar)
+    assert len(ince) == 1 and ince[0].yaricap == pytest.approx(97, abs=6)
+
+
 def test_cift_kanatli_pencere():
     # Sentetik pencereye (100-200, y 350, duvar 10) iki kanat: menteşeler iç
     # yüzde (y 345) iki uçta, yarıçap 50, odaya (yukarı) açılıp ortada buluşur.

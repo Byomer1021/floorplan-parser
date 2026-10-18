@@ -4,7 +4,7 @@ Her adım kendi modülünde; burada varsayılan ayarlarla sırayla çağrılır
 (kararlar K-004, K-006, K-007, K-008, K-009).
 """
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 
 import networkx as nx
 import numpy as np
@@ -48,19 +48,22 @@ def plani_coz(
     kalin, kalin_p, ince_p = iki_olcekli_duvarlar(ikili)
     parcalar = kalin_p + ince_p
     duvar = np.maximum(kalin, parca_maskesi(ince_p, gri.shape))
-    kapilar, pencereler, _ = aciklik_bul(ikili, parcalar, duvar, aciklik_kural)
+    # Yarı açık kapılar yalnız oda bölmede kiriş (kapı listesine girmez); aynı
+    # taramada kaydedilir.
+    kismi_kapilar: list[Kapi] | None = [] if oda_kural.kismi_kapi_esik <= 1.0 else None
+    kapilar, pencereler, _ = aciklik_bul(
+        ikili,
+        parcalar,
+        duvar,
+        aciklik_kural,
+        kismi_kayit=kismi_kapilar,
+        kismi_kayit_esik=oda_kural.kismi_kapi_esik,
+    )
     genis = genis_bosluklar(parcalar, duvar, kisa_duvar=oda_kural.genis_kisa_duvar)
     parca = bosluklar(
         parcalar, duvar, yalniz_hizali=oda_kural.hizali_bosluk, yan_suzgec=oda_kural.yan_suzgec
     )
-    kismi: list[Bosluk] = []
-    if oda_kural.kismi_kapi_esik <= 1.0:
-        # Yarı açık kapılar yalnız oda bölmede kiriş (kapı listesine girmez).
-        k_kural = replace(
-            aciklik_kural, kismi_esik=oda_kural.kismi_kapi_esik, kismi_pencerede=False
-        )
-        ek, _, _ = aciklik_bul(ikili, parcalar, duvar, k_kural)
-        kismi = [Bosluk(k.mentese, k.kapali_uc, 0.0) for k in ek if k.aci < 90]
+    kismi = [Bosluk(k.mentese, k.kapali_uc, 0.0) for k in kismi_kapilar or []]
     graf, etiket = oda_grafi(
         duvar,
         kapilar,
