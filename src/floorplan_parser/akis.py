@@ -20,7 +20,12 @@ from floorplan_parser.aciklik import (
     genis_bosluklar,
 )
 from floorplan_parser.degerlendirme import parca_maskesi
-from floorplan_parser.duvar import Parca, iki_olcekli_duvarlar
+from floorplan_parser.duvar import (
+    VARSAYILAN_INCE_KURAL,
+    InceKural,
+    Parca,
+    iki_olcekli_duvarlar,
+)
 from floorplan_parser.oda import VARSAYILAN_ODA_KURAL, OdaKural, oda_grafi
 from floorplan_parser.onisleme import delik_doldur, ikile
 
@@ -40,12 +45,13 @@ def plani_coz(
     gri: np.ndarray,
     oda_kural: OdaKural = VARSAYILAN_ODA_KURAL,
     aciklik_kural: AciklikKural = VARSAYILAN_ACIKLIK_KURAL,
+    ince_kural: InceKural = VARSAYILAN_INCE_KURAL,
 ) -> PlanSonucu:
     """Varsayılan akış. Oda bölmede kapı ve pencerelerin yanında parça
     uçlarından bulunan bütün boşluklar ve aynı doğrultudaki geniş açıklıklar
     (150-450 px) kapatılır; bina sınırı geniş açıklıklar kapanmış duvardan."""
     ikili = delik_doldur(ikile(gri), 4)
-    kalin, kalin_p, ince_p = iki_olcekli_duvarlar(ikili)
+    kalin, kalin_p, ince_p = iki_olcekli_duvarlar(ikili, kural=ince_kural)
     parcalar = kalin_p + ince_p
     duvar = np.maximum(kalin, parca_maskesi(ince_p, gri.shape))
     # Yarı açık kapılar yalnız oda bölmede kiriş (kapı listesine girmez); aynı

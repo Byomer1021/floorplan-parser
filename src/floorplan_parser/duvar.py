@@ -22,7 +22,7 @@ import cv2
 import numpy as np
 from skimage.morphology import skeletonize
 
-from floorplan_parser.onisleme import ac
+from floorplan_parser.onisleme import ac, ac_yonsuz
 
 _ALT_PIKSEL = 4
 
@@ -271,11 +271,20 @@ class InceKural:
     """İnce aday parçanın duvar sayılma koşulları (K-007, eşikler geliştirme
     bölümünde seçildi, docs/olcumler.md §6)."""
 
-    min_uzunluk: float = 45
+    # 45'ti (§6); 30 kısa bölme ve eğik parçaları da alıyor, duvar IoU aynı
+    # (olcumler §16).
+    min_uzunluk: float = 30
     max_kalinlik: float = 10
     max_degisim: float = 0.2  # kalınlık IQR / medyan
     max_paralel: int = 1  # merdiven basamakları paralel ve yakın
     paralel_uzaklik: float = 60
+    # Açmada kare + disk (``onisleme.ac_yonsuz``): eğik ince duvarlar kare
+    # açmada siliniyordu (olcumler §16). "" kapalı, "ince" yalnız ince
+    # ölçekte, "hepsi" kalın ölçekte de (kalın yazı harflerini duvar yapıyor),
+    # "ek": kare adaylar aynen, diskin getirdiği yeni piksellerden yalnız eğik
+    # parçalar eklenir (mevcut parçalar kaymaz).
+    yonsuz: str = "ek"
+    egik_min_sapma: float = 10.0  # "ek" kipinde eksenlerden en az sapma (derece)
 
 
 VARSAYILAN_INCE_KURAL = InceKural()
@@ -345,13 +354,42 @@ def dortgen_ciz(goruntu: np.ndarray, p: Parca, deger: int) -> None:
 
 
 def ince_aday_maskesi(
-    ikili: np.ndarray, k_kalin: int, k_ince: int
+    ikili: np.ndarray, k_kalin: int, k_ince: int, yonsuz: str = ""
 ) -> tuple[np.ndarray, np.ndarray]:
     """(kalın maske, ince aday maskesi). İnce aday: k_ince açmasından kalan,
-    kalın maskenin 1 piksel genişletilmişi dışında kalan kısım."""
-    kalin = ac(ikili, k_kalin)
+    kalın maskenin 1 piksel genişletilmişi dışında kalan kısım. ``yonsuz``:
+    "ince" ince açma, "hepsi" iki açma da kare + disk (``onisleme.ac_yonsuz``)."""
+    kalin = (ac_yonsuz if yonsuz == "hepsi" else ac)(ikili, k_kalin)
     genis = cv2.dilate(kalin, np.ones((3, 3), np.uint8))
-    return kalin, cv2.bitwise_and(ac(ikili, k_ince), cv2.bitwise_not(genis))
+    ince = (ac_yonsuz if yonsuz in ("ince", "hepsi") else ac)(ikili, k_ince)
+    return kalin, cv2.bitwise_and(ince, cv2.bitwise_not(genis))
+
+
+def egik_ince_parcalar(
+    ikili: np.ndarray,
+    kalin: np.ndarray,
+    aday: np.ndarray,
+    k_ince: int,
+    kural: InceKural,
+    max_bosluk: int,
+) -> list[Parca]:
+    """Kare açmanın sildiği eğik ince duvarlar: disk açmasının kareye göre
+    fazlası (kalın maske ve kare adaylar 1 px genişletilip çıkarılmış) ayrı
+    bir maske; oradaki parçalardan eksenlere ``egik_min_sapma``'dan açılı
+    olup ince kurallarını geçenler."""
+    k3 = np.ones((3, 3), np.uint8)
+    disk = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k_ince, k_ince))
+    fazla = cv2.morphologyEx(ikili, cv2.MORPH_OPEN, disk)
+    for m in (kalin, aday):
+        fazla = cv2.bitwise_and(fazla, cv2.bitwise_not(cv2.dilate(m, k3)))
+    parcalar = duvarlari_bul(fazla, max_bosluk)
+    sinir = math.radians(kural.egik_min_sapma)
+    return [
+        p
+        for p in parcalar
+        if min(p.aci % (math.pi / 2), math.pi / 2 - p.aci % (math.pi / 2)) >= sinir
+        and ince_secer(ince_ozellikler(p, fazla, parcalar, kural.paralel_uzaklik), kural)
+    ]
 
 
 def iki_olcekli_duvarlar(
@@ -366,7 +404,9 @@ def iki_olcekli_duvarlar(
     ``ikili``: mürekkep 255 (ör. ``onisleme.delik_doldur(ikile(gri), 4)``).
     Dönüş: (kalın maske, kalın parçalar, seçilen ince parçalar).
     """
-    kalin, aday = ince_aday_maskesi(ikili, k_kalin, k_ince)
+    kalin, aday = ince_aday_maskesi(
+        ikili, k_kalin, k_ince, "" if kural.yonsuz == "ek" else kural.yonsuz
+    )
     kalin_parcalar = duvarlari_bul(kalin, max_bosluk)
     adaylar = duvarlari_bul(aday, max_bosluk)
     secilen = [
@@ -374,6 +414,8 @@ def iki_olcekli_duvarlar(
         for p in adaylar
         if ince_secer(ince_ozellikler(p, aday, adaylar, kural.paralel_uzaklik), kural)
     ]
+    if kural.yonsuz == "ek":
+        secilen += egik_ince_parcalar(ikili, kalin, aday, k_ince, kural, max_bosluk)
     if not secilen:
         return kalin, kalin_parcalar, secilen
     # İnce parça kalın maskenin 1 piksel genişletilmişinden kesildi: ucu kalın

@@ -146,6 +146,30 @@ basamak dizisi kuralı denendi; her biri en çok 2 yanlışı elerken en az 12,
 duvarların ~%5'i hiçbir duvara değmiyor. Yanlış alan ince duvar alanının
 %0.2'si; kabul edildi, test bunu belgeliyor.
 
+**2026-10-18, eğik ince duvarlar** ([olcumler §16](olcumler.md)): cevaptaki
+20 px'ten ince eğik duvarların hiçbiri maskede değildi (25 duvar, 12 plan).
+Kare yapı elemanı yöne duyarlı: 7 px kare 45° eğik bandı ancak ~10 px
+kalınlıkta tutar. Eklenenler:
+
+- `InceKural.yonsuz="ek"`: kare açmanın aday maskesi aynen kalır; 7 px
+  disk açmasının kareye göre fazlası ayrı maske. Oradan eksenlere 10°'den
+  açılı ve ince kurallarını geçen parçalar ince duvara eklenir.
+- `InceKural.min_uzunluk` 45 → 30 (kısa bölme ve eğik parçalar).
+
+Geliştirmede oda F1 0.760 → 0.783, kapı F1 0.885 → 0.892, kenar F1 0.386
+→ 0.392, duvar IoU 0.908 → 0.909.
+
+**Denenip bırakılan:** disk iki ölçekte de (kalın başlık yazısının
+kıvrımları duvar oldu, duvar IoU 0.908 → 0.888, pencere F1 −0.018); disk
+yalnız ince ölçekte, birleşik maskeyle (mevcut çizgilerin uçları kayınca
+parçalar değişti; bir planda 323 px'lik bölme duvar düştü, kenar F1
+0.358).
+
+**Bilinen gerileme:** MR0601'de bulunan eğik duvar, koridoru holden ayıran
+kirişi yan süzgecine takıyor. Koridor birleşiyor; 1 oda ve 7 kenar
+kaybı. Kenar F1'in yalnız uzunluk değişikliğine göre (0.408) geride kalması
+bu tek plandan.
+
 ## K-008: Kapı ve pencere: boşluk + yay testi, geçerli (2026-10-17)
 
 `aciklik.aciklik_bul`:

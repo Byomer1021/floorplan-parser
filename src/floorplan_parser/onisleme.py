@@ -47,6 +47,15 @@ def ac(ikili: np.ndarray, boyut: int) -> np.ndarray:
     return cv2.morphologyEx(ikili, cv2.MORPH_OPEN, _kare(boyut))
 
 
+def ac_yonsuz(ikili: np.ndarray, boyut: int) -> np.ndarray:
+    """Kare ve disk açmasının birleşimi. Kare yöne duyarlı: 45° eğik bir bant
+    ancak kalınlığı boyut × √2 ise kalır. Disk her yönde aynı; karenin içinde
+    olduğundan birleşim karenin tuttuğu her pikseli tutar (köşeler dahil),
+    fazladan yalnız karenin sığmadığı eğik bantlar gelir."""
+    disk = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (boyut, boyut))
+    return cv2.max(ac(ikili, boyut), cv2.morphologyEx(ikili, cv2.MORPH_OPEN, disk))
+
+
 def kapa(ikili: np.ndarray, boyut: int) -> np.ndarray:
     return cv2.morphologyEx(ikili, cv2.MORPH_CLOSE, _kare(boyut))
 

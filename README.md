@@ -33,20 +33,21 @@ sayı ölçüldüğü anda girer. Test bölümüne henüz bakılmadı.
   0.880; plan başına 1.3 s. Mürekkep seçen bir yöntemin tavanı 0.95; tavana
   oran 0.977 ([olcumler §6](docs/olcumler.md)). Tek çekirdekle 0.84'tü
   ([§5](docs/olcumler.md)): ~7-8 px'lik bölme duvarlar merdiven gibi aynı
-  kalınlıktaki çizimlerden ayrılamıyordu ([K-007](docs/kararlar.md)).
-- **Kapı ve pencere** (aynı 62 plan): kapı kesinlik 0.958, duyarlılık
-  0.822, F1 0.885 ([olcumler §8, §15](docs/olcumler.md)); pencere kesinlik
-  0.886, duyarlılık 0.798, F1 0.840 ([§13](docs/olcumler.md); çift kanatlı
-  ve geniş pencereler eklenmeden önce 0.671). Kalan kapı hataları: yarı
-  açık çizilmiş kapılar ve duvar maskesine girmeyen eğik/ince duvarlardaki
-  kapılar.
-- **Oda grafı** (aynı 62 plan): oda F1 0.760 (kesinlik 0.850, duyarlılık
-  0.688), kapı kenarı F1 0.386 ([olcumler §9-11, §14-15](docs/olcumler.md)).
+  kalınlıktaki çizimlerden ayrılamıyordu ([K-007](docs/kararlar.md)). Eğik
+  ince duvarlar (kare yapı elemanı siliyordu) eklendikten sonra medyan
+  0.928 / ortalama 0.909 ([§16](docs/olcumler.md)).
+- **Kapı ve pencere** (aynı 62 plan): kapı kesinlik 0.957, duyarlılık
+  0.836, F1 0.892 ([olcumler §8, §15-16](docs/olcumler.md)); pencere
+  kesinlik 0.882, duyarlılık 0.798, F1 0.838 ([§13](docs/olcumler.md); çift
+  kanatlı ve geniş pencereler eklenmeden önce 0.671). Kalan kapı hatalarının
+  çoğu yarı açık çizilmiş kapılar.
+- **Oda grafı** (aynı 62 plan): oda F1 0.783 (kesinlik 0.859, duyarlılık
+  0.719), kapı kenarı F1 0.392 ([olcumler §9-11, §14-16](docs/olcumler.md)).
   Odalar uzaklık dönüşümü + watershed ile bölünüyor. Kaçan odaların en
   büyük payı duvarsız ayrımı olan komşuyla birleşenler (bu yöntemle
   bulunamaz); ikincisi kapısı bulunamayan komşuyla birleşenler. Kenar için
   iki odanın ikisi de bulunmalı.
-- Uçtan uca `akis.plani_coz`; plan başına medyan 6.1 s.
+- Uçtan uca `akis.plani_coz`; plan başına medyan 6.2 s.
 - Eşikler geliştirme bölümünde seçildi; **test bölümünde henüz
   ölçülmedi.**
 - **Bilinen yanlış:** merdivenin taban çizgisi gibi tek duran, duvar
@@ -54,13 +55,13 @@ sayı ölçüldüğü anda girer. Test bölümüne henüz bakılmadı.
   çok gerçek duvar kaybettirdi ([§7](docs/olcumler.md)).
 - **Kapsam dışı:** taralı ve çift çizgili stiller (36 plan); yöntem bunlarda
   duvar bulmuyor (IoU ~0). Bütün stillerde (86 geliştirme planı) duvar IoU
-  ortalaması 0.666, kapı F1 0.723, pencere F1 0.657, oda F1 0.629
-  ([olcumler §12-15](docs/olcumler.md)).
+  ortalaması 0.667, kapı F1 0.730, pencere F1 0.652, oda F1 0.647
+  ([olcumler §12-16](docs/olcumler.md)).
 - **Literatür:** dolu duvarlı planlarda bulunan tek klasik duvar sayısının
   üstünde (0.908 / 0.831). Bütün stillerde öğrenilmiş yöntemlerin
-  (0.77-0.89) çok altında. Kapı (kutu IoU) dolu planlarda K 0.962 / D
-  0.825, FloorYOLO bütün stillerde 0.810 / 0.786; pencere altında (kutu
-  IoU'lu F1 0.676 / ~0.76). Kurulum farklarıyla birlikte:
+  (0.77-0.89) çok altında. Kapı (kutu IoU) dolu planlarda K 0.963 / D
+  0.841, FloorYOLO bütün stillerde 0.810 / 0.786; pencere altında (kutu
+  IoU'lu F1 0.675 / ~0.76). Kurulum farklarıyla birlikte:
   [docs/literatur.md](docs/literatur.md).
 
 ## Akış
@@ -70,7 +71,7 @@ sayı ölçüldüğü anda girer. Test bölümüne henüz bakılmadı.
 | 1 | Okuma | bayt + `imdecode` (Windows'ta Türkçe yol) | `goruntu` | yazıldı |
 | 2 | İkileme | Otsu / uyarlamalı eşik | `onisleme` | yazıldı |
 | 3 | Gürültü | açma / kapama | `onisleme` | yazıldı |
-| 4 | Kalın/ince ayrımı | iki ölçek: kalın açma + kurala uyan ince parçalar | `onisleme`, `duvar` | yazıldı |
+| 4 | Kalın/ince ayrımı | iki ölçek: kalın açma + kurala uyan ince parçalar; eğik ince duvarlar disk açmanın fazlasından | `onisleme`, `duvar` | yazıldı |
 | 5 | Duvar | iskelet + olasılıksal Hough, eşdoğrusal birleştirme, kavşağa çekme | `duvar` | ilk sürüm |
 | 6 | Kapı | duvar ucundan ışınla boşluk + 4 varsayımlı çeyrek yay testi | `aciklik` | yazıldı |
 | 7 | Pencere | boşlukta paralel ince çizgiler; küçük yay kanatlı, iki yarım yay çift kanatlı pencere; 150-450 px geniş boşluklar da | `aciklik` | yazıldı |

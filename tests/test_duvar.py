@@ -1,9 +1,12 @@
+import math
+
 import cv2
 import numpy as np
 import pytest
 
 from floorplan_parser.degerlendirme import iou, parca_eslestir, parca_maskesi
 from floorplan_parser.duvar import (
+    InceKural,
     Parca,
     duvarlari_bul,
     iki_olcekli_duvarlar,
@@ -115,6 +118,24 @@ def test_merdiven_paralel_komsu_sayisi():
     basamak = [x for x in adaylar if abs(x.y1 - x.y2) < 1]
     assert len(basamak) == 6
     assert min(ince_ozellikler(x, aday, adaylar, 60)["paralel"] for x in basamak) >= 3
+
+
+def test_egik_ince_duvar_ek_kipte_bulunur():
+    # 45° eğik ince bölme duvar (cv2.line kalınlık 6; enine ölçüm 6.25 px):
+    # 7 px kare açma eğik bandı ancak ~7·√2 kalınlıkta tutar, bunu siler
+    # (kalınlık 7 ile çizilen 9.25 px'lik bant kalıyor). "ek" kipinde diskin
+    # fazlasından eğik parça olarak gelir; eksen parçaları değişmez.
+    p = plan_ciz(duvar=24, ic_duvar=8)
+    cv2.line(p.goruntu, (370, 120), (470, 220), 0, 6)
+    ikili = delik_doldur(ikile(p.goruntu), 4)
+    _, _, ince0 = iki_olcekli_duvarlar(ikili, kural=InceKural(yonsuz=""))
+    _, _, ince1 = iki_olcekli_duvarlar(ikili)
+    egik0 = [x for x in ince0 if abs(math.degrees(x.aci) - 45) < 5]
+    egik1 = [x for x in ince1 if abs(math.degrees(x.aci) - 45) < 5]
+    assert egik0 == [] and len(egik1) == 1
+    assert egik1[0].uzunluk == pytest.approx(100 * math.sqrt(2), abs=12)
+    eksen = [x for x in ince1 if x not in egik1]
+    assert [(x.x1, x.y1, x.x2, x.y2) for x in eksen] == [(x.x1, x.y1, x.x2, x.y2) for x in ince0]
 
 
 def test_bilinen_sinir_serbest_cizgi_duvar_sayilir():

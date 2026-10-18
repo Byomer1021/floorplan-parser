@@ -29,6 +29,7 @@ from floorplan_parser.degerlendirme import (
     parca_maskesi,
     poligon_eslesmeleri,
 )
+from floorplan_parser.duvar import VARSAYILAN_INCE_KURAL
 from floorplan_parser.oda import DIS, VARSAYILAN_ODA_KURAL
 from floorplan_parser.onisleme import ikile
 
@@ -63,6 +64,7 @@ def main() -> None:
         default="",
         help="OdaKural alanları, ör. hizali_bosluk=1,ayak_izi_cekirdek=401",
     )
+    ap.add_argument("--ince", default="", help="InceKural alanları, ör. yonsuz=1,min_uzunluk=30")
     ap.add_argument(
         "--stil",
         default="dolu",
@@ -79,13 +81,18 @@ def main() -> None:
             kismi_kanat_yan=float(y),
             kismi_pencerede=bool(int(pnc)),
         )
-    oda_kural = VARSAYILAN_ODA_KURAL
-    for parca in filter(None, a.oda.split(",")):
-        ad, deger = parca.split("=")
-        tip = type(getattr(oda_kural, ad))
-        oda_kural = replace(oda_kural, **{ad: tip(int(deger)) if tip is bool else tip(deger)})
-    if a.oda:
-        print("oda kuralı:", oda_kural, flush=True)
+
+    def kural_degistir(kural, metin: str):
+        for parca in filter(None, metin.split(",")):
+            ad, deger = parca.split("=")
+            tip = type(getattr(kural, ad))
+            kural = replace(kural, **{ad: tip(int(deger)) if tip is bool else tip(deger)})
+        if metin:
+            print("kural:", kural, flush=True)
+        return kural
+
+    oda_kural = kural_degistir(VARSAYILAN_ODA_KURAL, a.oda)
+    ince_kural = kural_degistir(VARSAYILAN_INCE_KURAL, a.ince)
 
     satirlar = []
     t_basla = time.perf_counter()
@@ -98,7 +105,7 @@ def main() -> None:
         if a.stil == "dolu" and dolgu < 0.8:
             continue
         t0 = time.perf_counter()
-        s = plani_coz(g, oda_kural=oda_kural, aciklik_kural=aciklik_kural)
+        s = plani_coz(g, oda_kural=oda_kural, aciklik_kural=aciklik_kural, ince_kural=ince_kural)
         sure = time.perf_counter() - t0
 
         kapi_c, pencere_c, oda_c = c.sinif("Door"), c.sinif("Window"), c.sinif("Room")

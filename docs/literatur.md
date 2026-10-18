@@ -102,6 +102,7 @@ Kıyas notları:
 | **bu çalışma, bütün stiller, §13 sonrası** | 〃 | geliştirme 86 | 〃 | 0.973 / 0.542 | **0.629 / 0.447** |
 | **bu çalışma, dolu, §15 sonrası** | + kapıda ince yarıçap taraması | geliştirme 62 | 〃 | **0.962 / 0.825** | 0.714 / 0.643 |
 | **bu çalışma, bütün stiller, §15 sonrası** | 〃 | geliştirme 86 | 〃 | **0.953 / 0.586** | 0.647 / 0.447 |
+| **bu çalışma, dolu, §16 sonrası** | + eğik ince duvarlar | geliştirme 62 | 〃 | **0.963 / 0.841** | 0.711 / 0.643 |
 
 Notlar:
 
@@ -129,6 +130,7 @@ Notlar:
 | **bu çalışma** | kirişle boşluk kapatma + ayak izi + havza bölütleme | CVC-FP dolu duvarlı, geliştirme 62 | bire bir IoU ≥ 0.5, D / K | **65.3 / 76.9** |
 | **bu çalışma, §14 sonrası** | + kesik hattaki uçtan kiriş yok, yarı açık kapı kirişi | 〃 | 〃 | **65.1 / 84.1** |
 | **bu çalışma, §15 sonrası** | + kapıda ince yarıçap taraması, T-kavşağı adayı | 〃 | 〃 | **68.8 / 85.0** |
+| **bu çalışma, §16 sonrası** | + eğik ince duvarlar | 〃 | 〃 | **71.9 / 85.9** |
 
 Neden doğrudan kıyaslanamaz:
 

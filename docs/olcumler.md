@@ -856,3 +856,71 @@ Bütün stiller (86 plan): kapı 460/25/328, F1 0.723 (önce 0.693; kutu K
 Fazla (20): cevapta pencere 10, boş 6, geometri 4. Oda birleştiren
 kaçakların çoğu artık "aday yok": eğik kısa duvar ve ince bölme duvar duvar
 maskesinde yok. Bu duvar adımının işi.
+
+## §16 Duvar: eğik ince duvarlar (2026-10-18)
+
+Geliştirme, I-II dolu duvarlı 62 plan. `scripts/duvar_hata.py`: cevaptaki
+her duvar poligonu için en küçük döndürülmüş dikdörtgenden eksenlere sapma
+ve kalınlık (kısa kenar), maskemizin kapsadığı pay ve ham mürekkep dolgusu.
+
+| cevap duvarı | adet | kapsanan alan payı (önce) | kapsama < 0.5 | sonra |
+|---|---|---|---|---|
+| eksen, < 7 px | 103 | 0.815 | 17 | 0.816 |
+| eksen, 7-10 px | 479 | 0.833 | 21 | 0.835 |
+| eksen, 10-14 px | 237 | 0.601 | 13 | 0.604 |
+| eksen, 14-20 px | 40 | 0.527 | 12 | 0.527 |
+| eksen, ≥ 20 px | 1590 | 0.952 | 1 | 0.952 |
+| eğik (5-45°), < 7 px | 1 | 0.025 | 1 | 0.849 |
+| eğik, 7-10 px | 14 | 0.022 | 14 | **0.781** |
+| eğik, 10-14 px | 2 | 0.004 | 2 | 0.595 |
+| eğik, 14-20 px | 8 | 0.005 | 8 | 0.384 |
+| eğik, ≥ 20 px | 69 | 0.933 | 2 | 0.939 |
+
+- Eksen duvarlarında 10-20 px'in düşük kapsaması kaçak değil. 237 duvarın
+  213'ü %50-80 kapsanıyor; cevap poligonu mürekkepten kalın. Hiç
+  kapsanmayanların mürekkep dolgusu medyan %46-57, yani içi boş çizim.
+- Eğik ince duvarlar (< 20 px, 25 duvar, 12 plan) hiç kapsanmıyordu;
+  dolguları medyan %80. Kare açma yöne duyarlı: 7 px kare 45° eğik bandı
+  ancak ~10 px kalınlıkta tutar (13 px kare ~18 px).
+
+**Varyantlar** (`degerlendir.py --ince alan=deger`; paralel koşu):
+
+| varyant | duvar IoU ort. | kapı F1 | pencere F1 | oda D/F/E | oda F1 | kenar F1 |
+|---|---|---|---|---|---|---|
+| w0 §15 | 0.908 | 0.885 | 0.840 | 414/73/188 | 0.760 | 0.386 |
+| w1 kare + disk, iki ölçekte | 0.888 | 0.888 | 0.822 | 425/79/177 | 0.769 | 0.364 |
+| w2 w1 + en kısa 30 px | 0.887 | 0.892 | 0.818 | 432/78/170 | 0.777 | 0.387 |
+| w3 kare + disk yalnız ince ölçekte | 0.909 | 0.887 | 0.840 | 424/70/178 | 0.774 | 0.358 |
+| w4 w3 + en kısa 30 px | 0.909 | 0.890 | 0.840 | 431/71/171 | 0.781 | 0.382 |
+| w5 yalnız en kısa 30 px | 0.908 | 0.886 | 0.838 | 419/74/183 | 0.765 | 0.408 |
+| w6 w3 + en kısa 38 px | 0.909 | 0.889 | 0.840 | 428/69/174 | 0.779 | 0.370 |
+| w7 diskin fazlasından yalnız eğik parça (`ek`) | 0.909 | 0.887 | 0.840 | 423/70/179 | 0.773 | 0.372 |
+| **w8 w7 + en kısa 30 px** | **0.909** | **0.892** | 0.838 | **433/71/169** | **0.783** | 0.392 |
+
+- w1: fazladan duvar piksellerinin neredeyse hepsi cevapta duvar değil
+  (bir planda 6365'in 6357'si). Kalın başlık yazısının kıvrımlarına 13 px
+  disk sığıyor, kare sığmıyor.
+- w3/w4: disk ince ölçekte mevcut çizgilerin uç ve kavşaklarına birkaç
+  piksel ekliyor; Hough parçaları kayıyor. MN0610'da maskede 9 piksellik
+  fark var, ama 323 px'lik bir bölme duvarı seçimden düştü, bir kapı
+  kayboldu, koridor birleşti: 8 kenar kaybı.
+- w7/w8: kare açmanın aday maskesi aynen; diskin fazlası (kalın maske ve
+  kare adaylar 1 px genişletilip çıkarılmış) ayrı maske. Oradan
+  eksenlere ≥ 10° açılı ve ince kurallarını geçen parçalar ekleniyor.
+- w8 ile w5 farkı plan plan: oda +4 BA0710, +5 MN0605, +3 UO0701, +2
+  LA0401; kenar −7 yalnız MR0601. Orada eğik duvar doğru bulunuyor, ama
+  koridoru holden ayıran kiriş yan süzgecine (§14) takılıyor; koridor
+  (bütün kapıların bağlandığı oda) hol, mutfak ve salonla birleşiyor.
+
+Seçilen w8. Oda + kenar toplamı w5 ile eşit (1.175 / 1.173); kapı, oda ve
+duvar w8'de daha iyi.
+
+**Uçtan uca** (tek başına koşu): duvar maske IoU medyan 0.928 / ortalama
+0.909, parça 0.882 / 0.878; kapı 464/21/91, F1 0.892 (kutu 0.898); pencere
+458/61/116, F1 0.838 (kutu 0.675); oda 433/71/169, K 0.859 / D 0.719 /
+F1 0.783; kenar 152/189/282, K 0.446 / D 0.350 / F1 0.392. Süre medyan
+6.2 s.
+
+Bütün stiller (86 plan): duvar IoU ortalama 0.667 / havuzlanmış 0.407;
+kapı 470/29/318, F1 0.730; pencere F1 0.652; oda 450/77/415, F1 0.647;
+kenar F1 0.311.
