@@ -11,9 +11,9 @@ Durum: **geçerli**, **açık** (karar bekliyor), **öneri** (onay bekliyor),
 ## K-001: Proje konumu ve depo, geçerli (2026-10-17)
 
 - Yerel: `D:\floorplan-parser`. C'de 17 GB boş, D'de 580 GB.
-- Uzak: `github.com/Byomer1021/floorplan-parser`, **private**. Public'e
-  geçiş veri seti lisansına bakıldıktan sonra (K-003).
-- Ömer Can'ın makinesinde uv önbelleği D'de: `UV_CACHE_DIR=D:\.cache\uv`.
+- Uzak: `github.com/Byomer1021/floorplan-parser`, 2026-10-18'den beri
+  **public**. Veri seti depoda değil, yalnız indirme betiği var (K-003).
+- Geliştirme makinesinde uv önbelleği D'de: `UV_CACHE_DIR=D:\.cache\uv`.
   Projeye yazılmadı, makineye özel.
 
 ## K-002: Öğrenilmiş model yok, geçerli (2026-10-17)
@@ -38,8 +38,7 @@ kütüphanesi bulursa düşer.
 
 ## K-003: Veri seti: CVC-FP, geçerli (2026-10-17)
 
-**2026-10-17: CVC-FP alındı** (Ömer Can onayıyla; gerekirse başka set
-sonradan eklenir). İndirme, sha256, lisans ve içerik:
+**2026-10-17: CVC-FP alındı** (gerekirse başka set sonradan eklenir). İndirme, sha256, lisans ve içerik:
 [data/README.md](../data/README.md). Lisans cümlesi sayfada çelişkili
 (BY / BY-NC); ticari olmayan kullanım varsayılıyor. Dört stilin ölçümü
 [olcumler §3](olcumler.md).
@@ -95,8 +94,8 @@ geliştirme, 36 test (I-II 63/27, sayi 7/3, image 13/5, p 3/1).
   (`1`, `IIa_A01001`). Bu planlara göre eşik seçilmedi.
 - I-II'nin içi boş 4 planından 3'ü teste düştü (rastgele).
 
-**2026-10-18, test ölçüldü** ([olcumler §17](olcumler.md)): Ömer Can'ın
-onayıyla, kod `dee7a09`, bir kez. Dolu duvarlı 24 test planında duvar IoU
+**2026-10-18, test ölçüldü** ([olcumler §17](olcumler.md)): yöntem
+donduruldu, kod `dee7a09`, bir kez. Dolu duvarlı 24 test planında duvar IoU
 0.913, kapı F1 0.904, pencere F1 0.830, oda F1 0.770, kenar F1 0.502.
 **Bundan sonra eşik ya da yöntem değişirse test sayıları geçersiz
 sayılır**; yeni bir test ölçümü yapılmaz, değişiklik geliştirmede raporlanır.
