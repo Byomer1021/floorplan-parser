@@ -96,7 +96,7 @@ geliştirme, 36 test (I-II 63/27, sayi 7/3, image 13/5, p 3/1).
 - I-II'nin içi boş 4 planından 3'ü teste düştü (rastgele).
 
 **2026-10-18, test ölçüldü** ([olcumler §17](olcumler.md)): Ömer Can'ın
-onayıyla, kod `ec5a90b`, bir kez. Dolu duvarlı 24 test planında duvar IoU
+onayıyla, kod `dee7a09`, bir kez. Dolu duvarlı 24 test planında duvar IoU
 0.913, kapı F1 0.904, pencere F1 0.830, oda F1 0.770, kenar F1 0.502.
 **Bundan sonra eşik ya da yöntem değişirse test sayıları geçersiz
 sayılır**; yeni bir test ölçümü yapılmaz, değişiklik geliştirmede raporlanır.

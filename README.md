@@ -17,7 +17,7 @@ GTÜ, Görüntü İşleme dersi projesi (2026 güz). Ders kodu, takvim ve takım
 henüz kayıtlı değil.
 
 **Yöntem donduruldu ve test bölümünde bir kez ölçüldü (2026-10-18, kod
-`ec5a90b`).** Bu sayfaya her sayı ölçüldüğü anda girer.
+`dee7a09`).** Bu sayfaya her sayı ölçüldüğü anda girer.
 
 **Test sonucu** (CVC-FP, dolu duvarlı 24 test planı; eşikler geliştirmede
 seçildi, testten sonra ayar yok; [olcumler §17](docs/olcumler.md)):

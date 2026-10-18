@@ -927,7 +927,7 @@ kenar F1 0.311.
 
 ## §17 Test bölümü, tek ölçüm (2026-10-18)
 
-[K-005](kararlar.md) gereği test bölümüne bir kez bakıldı. Kod `ec5a90b`
+[K-005](kararlar.md) gereği test bölümüne bir kez bakıldı. Kod `dee7a09`
 (§16 sonrası), bütün eşikler geliştirme bölümünde seçilmişti; bu ölçümden
 sonra ayar yok. `scripts/degerlendir.py --bolum test --stil {dolu,hepsi}`.
 Test bölümü 36 plan: I-II 27 (24'ü dolu duvarlı), image 5, sayi 3, p 1.
