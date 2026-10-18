@@ -26,6 +26,18 @@ uv run python scripts/sekiller.py --yalniz pipeline,failures
 Sayılar `docs/olcumler.md`'den elle girildi (§16 geliştirme, §17 test);
 ölçüm değişirse tablolar elle güncellenir.
 
+## Sunum ve demo
+
+- Sunum (İngilizce, 14 slayt, konuşmacı notlu) repo dışında tutuluyor.
+  Görselleri
+  `scripts/sekiller.py` üretir (`slide_input.png`, `slide_output.png` ve
+  rapor şekilleri).
+- Demo: `uv run python scripts/demo.py --cvcfp IIa_LZ1101` (sunumdaki
+  plan). Sunumdan önce bir kez çalıştırılmalı.
+
 ## Açık
 
-- Yazar bloğunda yalnız Ömer Can var; ekip üyeleri eklenecek.
+- Yazar bloğunda yalnız Ömer Can var; ekip üyeleri eklenecek (rapor ve
+  sunum kapağı).
+- Sunumun son slaytında özel deponun adresi var: sunmadan önce erişim ver
+  ya da satırı kaldır.

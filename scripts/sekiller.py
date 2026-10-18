@@ -222,15 +222,33 @@ def sekil_hatalar() -> None:
     kaydet(fig, "failures.png")
 
 
+def sekil_slayt() -> None:
+    """Sunum için girdi / çıktı çifti (test planı IIa_LZ1101, bina kırpıntısı)."""
+    g, c = plan("IIa_LZ1101")
+    s = plani_coz(g)
+    kutu = bina_kutusu(c)
+    CIKTI.mkdir(parents=True, exist_ok=True)
+    for ad, im in (
+        ("slide_input.png", cv2.cvtColor(g, cv2.COLOR_GRAY2BGR)),
+        ("slide_output.png", katmanlar(g, s, kalinlik=5)),
+    ):
+        k = kes(im, kutu)
+        olcek = 1400 / k.shape[1]
+        k = cv2.resize(k, None, fx=olcek, fy=olcek, interpolation=cv2.INTER_AREA)
+        cv2.imencode(".png", k)[1].tofile(str(CIKTI / ad))
+        print("->", CIKTI / ad)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--yalniz", default="", help="pipeline,radius,test,failures")
+    ap.add_argument("--yalniz", default="", help="pipeline,radius,test,failures,slide")
     a = ap.parse_args()
     hepsi = {
         "pipeline": sekil_akis,
         "radius": sekil_yaricap,
         "test": sekil_test,
         "failures": sekil_hatalar,
+        "slide": sekil_slayt,
     }
     for ad in a.yalniz.split(",") if a.yalniz else hepsi:
         hepsi[ad]()
