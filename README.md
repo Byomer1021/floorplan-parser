@@ -112,7 +112,13 @@ uv run python scripts/duvar_deney.py --grup I-II --kalinlik 13 --yontem iki
 uv run python scripts/aciklik_deney.py
 uv run python scripts/oda_deney.py
 uv run python scripts/degerlendir.py --bolum gelistirme   # uçtan uca
+uv run python scripts/demo.py --cvcfp IIa_AP3301        # demo: katmanlı görüntü + graf JSON
+uv run python scripts/demo.py yol/plan.png              # herhangi bir plan görüntüsü
+uv run python scripts/sekiller.py                       # rapor şekilleri → rapor/sekiller/
 ```
+
+Rapor (IEEE, İngilizce): [rapor/](rapor/), derleme notu
+[rapor/README.md](rapor/README.md).
 
 Python 3.12, bağımlılıklar `uv.lock`'ta sabit.
 

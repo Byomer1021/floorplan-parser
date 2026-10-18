@@ -26,3 +26,13 @@ results/ara/
 .idea/
 Thumbs.db
 desktop.ini
+
+# rapor derleme artıkları
+rapor/*.log
+rapor/*.blg
+rapor/*.aux
+rapor/*.bbl
+rapor/*.out
+
+# demo çıktıları (scripts/demo.py)
+results/demo/
