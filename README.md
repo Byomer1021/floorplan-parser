@@ -49,7 +49,14 @@ sayı ölçüldüğü anda girer. Test bölümüne henüz bakılmadı.
   kalınlığında çizgi duvar sayılıyor; elemek için denenen kurallar daha
   çok gerçek duvar kaybettirdi ([§7](docs/olcumler.md)).
 - **Kapsam dışı:** taralı ve çift çizgili stiller (36 plan); yöntem bunlarda
-  duvar bulmuyor (IoU ~0).
+  duvar bulmuyor (IoU ~0). Bütün stillerde (86 geliştirme planı) duvar IoU
+  ortalaması 0.666, kapı F1 0.693, oda F1 0.584
+  ([olcumler §12](docs/olcumler.md)).
+- **Literatür:** dolu duvarlı planlarda bulunan tek klasik duvar sayısının
+  üstünde (0.908 / 0.831). Bütün stillerde öğrenilmiş yöntemlerin
+  (0.77-0.89) çok altında. Kapı duyarlılığı FloorYOLO'ya yakın, pencere
+  belirgin altında. Kurulum farklarıyla birlikte:
+  [docs/literatur.md](docs/literatur.md).
 
 ## Akış
 
@@ -97,6 +104,7 @@ tests/                  sentetik plan ve CVC-FP okuyucu testleri
 data/                   veri seti (depoya girmez, bkz. data/README.md)
 docs/kararlar.md        tasarım kararları, K-NNN
 docs/olcumler.md        numaralı ölçüm kaydı
+docs/literatur.md       yayımlanmış sonuçlarla kıyas
 docs/gunluk/            günlük çalışma kaydı
 results/                deney CSV'leri; results/ara/ görseller (depoya girmez)
 ```

@@ -528,3 +528,54 @@ birebir aynı): duvar 0.926 / 0.880; kapı 421/10/134 (F1 0.854); pencere
 | dış | 40 | yanlış oda çiftine bağlandı | 24 |
 | kısmi | 13 | | |
 | başka nedenle birleşti | 15 | | |
+
+## §12 Literatürle kıyas için: bütün stiller, kutu IoU (2026-10-18)
+
+`scripts/degerlendir.py --bolum gelistirme --stil {dolu,hepsi}`. Akış ve
+eşikler §11 ile aynı; değişen yalnız ölçüm. Eklenenler:
+
+- `--stil hepsi`: geliştirme bölümünün 86 planının hepsi (taralı, çift
+  çizgili, içi boş dahil).
+- **Kutu IoU:** kapı ve pencere poligonlarının eksen hizalı sınır kutusuyla
+  eşleme, IoU ≥ 0.5, bire bir. Nesne tespiti yayınları kutu ölçüyor.
+- **Havuzlanmış duvar IoU:** bütün planların kesişim toplamı / birleşim
+  toplamı.
+
+Kıyas: [literatur.md](literatur.md).
+
+| | dolu (62) | hepsi (86) |
+|---|---|---|
+| duvar maske IoU medyan / ortalama | 0.926 / 0.908 | 0.876 / 0.666 |
+| duvar IoU havuzlanmış | 0.906 | 0.407 |
+| kapı, poligon D/F/E, K / D / F1 | 421/10/134, 0.977 / 0.759 / 0.854 | 425/14/363, 0.968 / 0.539 / 0.693 |
+| kapı, kutu D/F/E, K / D / F1 | 423/8/132, 0.981 / 0.762 / 0.858 | 427/12/361, 0.973 / 0.542 / 0.696 |
+| pencere, poligon D/F/E, F1 | 335/89/239, 0.671 | 335/137/490, 0.517 |
+| pencere, kutu D/F/E, K / D / F1 | 246/178/328, 0.580 / 0.429 / 0.493 | 246/226/579, 0.521 / 0.298 / 0.379 |
+| oda D/F/E, F1 | 393/118/209, 0.706 | 410/129/455, 0.584 |
+| kenar D/F/E, F1 | 121/197/313, 0.322 | 121/201/509, 0.254 |
+
+"dolu" satırları §11'deki uçtan uca ölçümle aynı; yeniden üretildi.
+
+Grup başına, hepsi (`results/degerlendir_gelistirme_hepsi.csv`):
+
+| grup | plan | duvar IoU ort | kapı D/F/E | pencere D/F/E | oda D/F/E | kenar D/F/E |
+|---|---|---|---|---|---|---|
+| I-II dolu | 62 | 0.908 | 421/10/134 | 335/89/239 | 393/118/209 | 121/197/313 |
+| I-II içi boş | 1 | 0.195 | 4/0/2 | 0/4/5 | 4/1/3 | 0/2/4 |
+| sayi (taralı) | 7 | 0.109 | 0/4/71 | 0/29/69 | 13/10/61 | 0/2/55 |
+| image (taralı dolgu) | 13 | 0.000 | 0/0/139 | 0/15/163 | 0/0/165 | 0/0/124 |
+| p (çift çizgi) | 3 | 0.002 | 0/0/17 | 0/0/14 | 0/0/17 | 0/0/13 |
+
+- Dolu olmayan 24 planda yöntem neredeyse hiçbir şey bulmuyor. Doğru
+  kapıların 421/425'i, doğru pencerelerin hepsi, doğru odaların 393/410'u
+  dolu planlardan.
+- Havuzlanmış IoU'yu `image` grubu belirliyor: 13 plan, her biri
+  5671x7383 ve hepsinde IoU 0.
+- Pencerede kutu IoU'lu doğru sayısı poligon IoU'lu doğru sayısından az
+  (246 ve 335). Nedeni incelenmedi.
+- Kapı kenarı duyarlılığı yaklaşık olarak üç olasılığın çarpımı: kapı
+  bulunur ve iki oda bulunur, 0.76 × 0.65 × 0.65 ≈ 0.32. Bağımsızlık
+  varsayımıyla bu bir kaba hesap. Ölçülen 0.28.
+- Oda duyarlılığının tavanı (duvarsız ayrımla birleşen 79 oda bulunamaz):
+  (602 - 79) / 602 ≈ 0.87. §10'daki 0.85 o zamanki 91 odayla
+  hesaplanmıştı.
