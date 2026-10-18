@@ -16,11 +16,26 @@ room/wall/door graph.*
 GTÜ, Görüntü İşleme dersi projesi (2026 güz). Ders kodu, takvim ve takım
 henüz kayıtlı değil.
 
-**Hafta 0: ortam, ön işleme ve duvar adımının ilk sürümü yazıldı; CVC-FP
-indirildi ve geliştirme bölümünde ilk ölçümler alındı.** Bu sayfaya her
-sayı ölçüldüğü anda girer. Test bölümüne henüz bakılmadı.
+**Yöntem donduruldu ve test bölümünde bir kez ölçüldü (2026-10-18, kod
+`ec5a90b`).** Bu sayfaya her sayı ölçüldüğü anda girer.
 
-Şu ana kadar ölçülen:
+**Test sonucu** (CVC-FP, dolu duvarlı 24 test planı; eşikler geliştirmede
+seçildi, testten sonra ayar yok; [olcumler §17](docs/olcumler.md)):
+
+| | kesinlik | duyarlılık | F1 / IoU |
+|---|---|---|---|
+| duvar (piksel IoU, plan ortalaması) | | | 0.913 |
+| kapı | 0.985 | 0.835 | 0.904 |
+| pencere | 0.863 | 0.798 | 0.830 |
+| oda | 0.825 | 0.722 | 0.770 |
+| oda-kapı-oda kenarı | 0.580 | 0.441 | 0.502 |
+
+Bütün stillerde (36 test planı): kapı F1 0.770, pencere 0.625, oda 0.651,
+kenar 0.428; taralı ve çift çizgili planlarda duvar bulunmuyor. Kenar
+testte geliştirmeden (0.392) belirgin yüksek; örneklem küçük ve kenar,
+koridorun bulunmasına çok duyarlı.
+
+Geliştirmede ölçülen (yöntem seçimi bunlarla yapıldı):
 
 - **Veri:** CVC-FP, 122 plan, dört çizim stili. Duvarı dolu siyah çizilmiş
   olanlar 86 plan (%70); kalanı taralı ya da çift çizgi
@@ -48,8 +63,8 @@ sayı ölçüldüğü anda girer. Test bölümüne henüz bakılmadı.
   bulunamaz); ikincisi kapısı bulunamayan komşuyla birleşenler. Kenar için
   iki odanın ikisi de bulunmalı.
 - Uçtan uca `akis.plani_coz`; plan başına medyan 6.2 s.
-- Eşikler geliştirme bölümünde seçildi; **test bölümünde henüz
-  ölçülmedi.**
+- Eşikler geliştirme bölümünde seçildi; test bölümünde bir kez ölçüldü
+  (yukarıda). Duvar, kapı, pencere ve oda geliştirmeyle ±0.015 içinde.
 - **Bilinen yanlış:** merdivenin taban çizgisi gibi tek duran, duvar
   kalınlığında çizgi duvar sayılıyor; elemek için denenen kurallar daha
   çok gerçek duvar kaybettirdi ([§7](docs/olcumler.md)).

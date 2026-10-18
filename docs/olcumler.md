@@ -924,3 +924,48 @@ F1 0.783; kenar 152/189/282, K 0.446 / D 0.350 / F1 0.392. Süre medyan
 Bütün stiller (86 plan): duvar IoU ortalama 0.667 / havuzlanmış 0.407;
 kapı 470/29/318, F1 0.730; pencere F1 0.652; oda 450/77/415, F1 0.647;
 kenar F1 0.311.
+
+## §17 Test bölümü, tek ölçüm (2026-10-18)
+
+[K-005](kararlar.md) gereği test bölümüne bir kez bakıldı. Kod `ec5a90b`
+(§16 sonrası), bütün eşikler geliştirme bölümünde seçilmişti; bu ölçümden
+sonra ayar yok. `scripts/degerlendir.py --bolum test --stil {dolu,hepsi}`.
+Test bölümü 36 plan: I-II 27 (24'ü dolu duvarlı), image 5, sayi 3, p 1.
+
+| | geliştirme, dolu (62) | **test, dolu (24)** |
+|---|---|---|
+| duvar maske IoU medyan / ortalama | 0.928 / 0.909 | **0.926 / 0.913** |
+| duvar IoU havuzlanmış | 0.908 | 0.912 |
+| duvar parça IoU medyan / ortalama | 0.882 / 0.878 | 0.883 / 0.874 |
+| kapı D/F/E | 464/21/91 | 197/3/39 |
+| kapı K / D / F1 | 0.957 / 0.836 / 0.892 | **0.985 / 0.835 / 0.904** |
+| kapı kutu IoU F1 | 0.898 | 0.904 |
+| pencere D/F/E | 458/61/116 | 202/32/51 |
+| pencere K / D / F1 | 0.882 / 0.798 / 0.838 | **0.863 / 0.798 / 0.830** |
+| pencere kutu IoU F1 | 0.675 | 0.645 |
+| oda D/F/E | 433/71/169 | 174/37/67 |
+| oda K / D / F1 | 0.859 / 0.719 / 0.783 | **0.825 / 0.722 / 0.770** |
+| kenar D/F/E | 152/189/282 | 83/60/105 |
+| kenar K / D / F1 | 0.446 / 0.350 / 0.392 | **0.580 / 0.441 / 0.502** |
+| süre medyan | 6.2 s | 7.2 s |
+
+| bütün stiller | geliştirme (86) | **test (36)** |
+|---|---|---|
+| duvar IoU ortalama / havuzlanmış | 0.667 / 0.407 | 0.634 / 0.411 |
+| kapı K / D / F1 | 0.942 / 0.596 / 0.730 | 0.966 / 0.640 / 0.770 |
+| pencere F1 (kutu) | 0.652 (0.525) | 0.625 (0.489) |
+| oda K / D / F1 | 0.854 / 0.520 / 0.647 | 0.818 / 0.540 / 0.651 |
+| kenar F1 | 0.311 | 0.428 |
+
+Test grup başına duvar IoU: I-II dolu 0.913 (24), I-II içi boş 0.228 (3),
+image 0.000 (5), sayi 0.071 (3), p 0.000 (1).
+
+- Duvar, kapı, pencere ve oda geliştirmeyle ±0.015 içinde. Eşikler
+  geliştirme planlarına belirgin biçimde aşırı uymamış.
+- Kenar testte belirgin yüksek (0.502 / 0.392). Testte cevapta 188 kenar
+  var; kenar, merkezdeki tek odanın (koridor) bulunup bulunmamasına çok
+  duyarlı (§16, MR0601). Bu farkı yöntemin iyiliği diye okumamak gerek;
+  örneklem küçük ve oynak.
+- Pencere kutu IoU'lu F1 testte 0.03 düşük; poligon IoU'lu F1 aynı.
+- Süre farkı koşu koşullarından (aynı makine, art arda); ölçüm amaçlı
+  değil.

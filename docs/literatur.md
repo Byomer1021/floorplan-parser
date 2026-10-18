@@ -4,8 +4,14 @@
 bizimkiyle nasıl kıyaslanıyor? Her sayının yanında kaynağı ve onu kimin
 okuduğu yazılı. "Okundu" kaynağın metni açılıp tablosu bizzat okundu
 demek. "İkinci el" başka bir yayının aktarımı demek. Bizim sayılarımız
-geliştirme bölümünden ([olcumler §12](olcumler.md)). Test bölümü henüz
-ölçülmedi.
+geliştirme bölümünden ([olcumler §12](olcumler.md)); sonraki iyileştirmeler
+tablolarda "§N sonrası" satırları.
+
+**Test bölümü** (2026-10-18, bir kez, [olcumler §17](olcumler.md)), dolu
+duvarlı 24 plan: duvar IoU 0.913; kapı K / D 0.985 / 0.835 (kutu IoU'lu da
+aynı); pencere kutu IoU'lu K / D 0.671 / 0.621; oda D / K 0.722 / 0.825.
+Bütün stillerde (36 plan) kapı kutu K / D 0.966 / 0.640. Aşağıdaki kıyas
+notları test sayıları için de geçerli.
 
 ## Kısa sonuç
 
