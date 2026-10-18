@@ -46,6 +46,18 @@ class OdaKural:
     # ve geniş geçitte birleşme oranı.
     havza_cekirdek: float = 45.0  # geliştirmede 35-55 plato (§11)
     havza_birlesme: float = 0.8
+    # Akış (``akis.plani_coz``) ayarları: oda bölmede kapatılan parça
+    # boşluklarında karşı duvar hizalı olmalı (``aciklik.bosluklar``,
+    # yalniz_hizali); geniş boşluklarda kısa ayak kabul (``genis_bosluklar``).
+    hizali_bosluk: bool = False
+    genis_kisa_duvar: bool = False
+    # aciklik.bosluklar: "", "aa" ya da "duvarli"; geliştirmede "duvarli" oda
+    # F1 0.706 → 0.722, kenar F1 0.321 → 0.343 (olcumler §14).
+    yan_suzgec: str = "duvarli"
+    # Yarı açık çizilmiş kapı (aciklik kismi_esik) yalnız oda bölmede kiriş:
+    # kapı listesine girmez. > 1 kapalı. Geliştirmede 0.95 (0.90 aynı) oda F1
+    # 0.722 → 0.734, kapı ve kenar değişmedi (olcumler §14).
+    kismi_kapi_esik: float = 0.95
 
 
 VARSAYILAN_ODA_KURAL = OdaKural()

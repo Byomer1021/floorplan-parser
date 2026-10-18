@@ -655,3 +655,115 @@ oda 411/131/454. CSV'ler: `results/degerlendir_gelistirme_pencere.csv`
 - Görüntüyle bakılan "iki test de geçmedi" örnekleri: yarı açık çizilmiş
   tek kanatlı pencere, sabit + kanatlı karma pencere (kanatlar boşluğun bir
   kısmında, çift kanat varsayımı tutmuyor).
+
+## §14 Oda: kesik hattaki uçtan kiriş yok, yarı açık kapı kirişi (2026-10-18)
+
+Geliştirme, I-II dolu duvarlı 62 plan; cevapta 602 oda. Başlangıç (§13
+akışı): oda 394/120/208, F1 0.706; kenar 121/200/313, F1 0.321.
+
+**Hata sınıflandırması** (`scripts/oda_hata.py`; fazla bölgeler de
+sınıflanıyor, `--kirp` türe göre görüntü yazıyor):
+
+| eksik (208) | | fazla (120) | |
+|---|---|---|---|
+| duvarsız ayrımla birleşti | 83 | bölünmüş (cevap odası eşleşmemiş) | 38 |
+| kapıdan birleşti | 63 | kırıntı (cevap odası başka bölgeyle eşleşmiş) | 32 |
+| dış | 33 | birleşik (≥ 2 cevap odası) | 28 |
+| başka nedenle birleşti | 16 | cevapsız alan | 18 |
+| kısmi | 13 | kısmi | 4 |
+
+Görüntüyle: aşırı bölmenin (70) çoğunda odayı ya da koridoru boydan kesen
+bir kiriş var. Kiriş, oda bölmede kapatılan sınıflanmamış bir parça
+boşluğu.
+
+**Kapatılan boşluklar** (`scripts/bosluk_hata.py`): kapı ya da pencere
+olmayan 221 parça boşluğu. Kirişin iki yanında (yarım kalınlık + 20 px)
+cevaptaki oda:
+
+- **İç, 98:** iki yan aynı oda, zararlı.
+- **Ayırıcı, 59:** iki farklı oda.
+- **Dış, 64:** bir yan oda değil.
+
+| hedef duvar | iç | ayırıcı | dış |
+|---|---|---|---|
+| hizalı | 14 | 23 | 37 |
+| dik duvarın yüzü | 84 | 32 | 14 |
+| parçasız | 0 | 4 | 13 |
+
+Genişlik ve kiriş boyunca mürekkep ayırmıyor. Işının çıktığı uçtan iki yana
+bakış (`aciklik.yan_durumu`: bitişik ≤ 3 px, yakın < 40, aralıklı 40-220,
+açık) ayırıyor:
+
+| uç yanları (dik hedef) | iç | ayırıcı | dış |
+|---|---|---|---|
+| aralıklı + aralıklı | 46 | 6 | 0 |
+| bitişik + bitişik | 5 | 0 | 0 |
+| aralıklı + bitişik | 1 | 3 | 0 |
+| açık + aralıklı | 22 | 15 | 4 |
+| açık + bitişik | 6 | 6 | 3 |
+| açık + açık | 4 | 2 | 6 |
+
+İki yanı da duvarlı uç (bütün hedeflerde): 60 iç, 13 ayırıcı. Uç, iki yanı
+kapı boşluğuyla kesik bir duvar hattının üstünde (koridordaki T-kavşağı).
+
+**Varyantlar** (`degerlendir.py --oda alan=deger`; r ve k koşuları dörder
+paralel, süreleri karşılaştırılamaz):
+
+| varyant | oda D/F/E | oda K / D / F1 | kenar F1 |
+|---|---|---|---|
+| r0 §13 akışı | 394/120/208 | 0.767 / 0.654 / 0.706 | 0.321 |
+| r1 yalnız hizalı hedef (`hizali_bosluk`) | 363/60/239 | 0.858 / 0.603 / 0.708 | 0.255 |
+| r2 oda grafında geniş boşlukta kısa ayak | 395/155/207 | 0.718 / 0.656 / 0.686 | 0.309 |
+| r3 r1 + r2 | 363/94/239 | 0.794 / 0.603 / 0.686 | 0.229 |
+| **r4 iki yanı duvarlı uçtan kiriş yok** (`yan_suzgec=duvarli`) | **383/76/219** | **0.834 / 0.636 / 0.722** | **0.343** |
+| r5 yalnız iki yanı aralıklı (`aa`) | 380/88/222 | 0.812 / 0.631 / 0.710 | 0.323 |
+
+r4 seçildi. Sonra kapıdan birleşen 84 odanın 78'inde aradaki cevap kapısı
+bulunmamıştı. Yarı açık kapı denendi (r4 üstüne):
+
+| varyant | kapı F1 | oda D/F/E | oda F1 | kenar F1 |
+|---|---|---|---|---|
+| k1 yarı açık kapı kapı listesinde (0.95) | 0.838 | 392/74/210 | 0.734 | 0.349 |
+| **k2 yarı açık kapı yalnız oda kirişi** (`kismi_kapi_esik=0.95`) | **0.854** | **392/74/210** | **0.734** | **0.343** |
+| k3 aynı, eşik 0.90 | 0.854 | 392/74/210 | 0.734 | 0.343 |
+
+k2 seçildi: kapı F1'ine dokunmadan k1 ile aynı oda kazancı.
+
+k2 üstünde ayak izi ve duvar payı yeniden tarandı:
+
+| değişen | oda D/F/E | oda F1 | kenar F1 |
+|---|---|---|---|
+| duvar payı 0.7 | 394/90/208 | 0.726 | 0.339 |
+| duvar payı 0.6 | 394/104/208 | 0.716 | 0.337 |
+| ayak izi 401 | 394/76/208 | 0.735 | 0.337 |
+| ayak izi 501 | 400/77/202 | 0.741 | 0.339 |
+
+Duvar payını gevşetmek kötü. Ayak izi 301-501 plato; değişmedi.
+
+**Uçtan uca** (`degerlendir.py`, tek başına koşu): oda 392/74/210, K 0.841 /
+D 0.651 / F1 0.734; kenar 129/189/305, K 0.406 / D 0.297 / F1 0.343. Duvar,
+kapı, pencere §13 ile aynı. Plan başına süre medyan 5.3 s (önce 4.2 s; yarı
+açık kapı için ikinci açıklık taraması). Bütün stiller (86 plan): oda
+411/79/454, F1 0.607 (önce 0.584); kenar F1 0.271 (önce 0.253).
+
+**Kalan hatalar:**
+
+| eksik (210) | | fazla (74) | |
+|---|---|---|---|
+| duvarsız ayrımla birleşti (bulunamaz) | 93 | birleşik | 26 |
+| kapıdan birleşti | 76 | kırıntı | 19 |
+| dış | 32 | bölünmüş | 15 |
+| başka nedenle birleşti | 8 | cevapsız alan | 13 |
+| kısmi | 1 | kısmi | 1 |
+
+- Kapıdan birleşenlerin 70/76'sında aradaki kapı bulunmamış. Görüntüyle
+  bakılanlar: dar WC'nin yarı açık kapısı (aday boşluk yok), çapraz (45°)
+  kısa duvarlardaki kapılar (parça yok).
+- Duvarsız ayrımla birleşenler bu turun başındaki 83'ten 93'e çıktı.
+  Muhtemel neden: kaldırılan kirişlerin bir kısmı bu ayrımları tesadüfen
+  bölüyordu. Doğrulanmadı.
+- Dış sayılan odalar: garaj (garaj kapısının iki yanında parçaya dönüşmemiş
+  köşe çıkıntısı), dış duvarı baştan sona ince pencere çerçevesiyle
+  çizilmiş oda (ayak izi o tarafta kapanmıyor), geniş camla terasa açılan
+  oturma alanı.
+- Oda duyarlılığının tavanı (duvarsız ayrım): (602 - 93) / 602 ≈ 0.85.

@@ -125,6 +125,7 @@ Notlar:
 | Ahmed vd. 2011, okundu | kalın/orta/ince çizgi ayrımı, dış duvarların dışbükey zarfı dışını silme, boşluk kapatma | aynı 80 plan | DR / RA | 89 / 79 |
 | Ahmed vd. 2012, okundu | 2011 + OCR'lı oda etiketiyle duvarsız bölme | aynı 80 plan | DR / RA | 85 / 82 |
 | **bu çalışma** | kirişle boşluk kapatma + ayak izi + havza bölütleme | CVC-FP dolu duvarlı, geliştirme 62 | bire bir IoU ≥ 0.5, D / K | **65.3 / 76.9** |
+| **bu çalışma, §14 sonrası** | + kesik hattaki uçtan kiriş yok, yarı açık kapı kirişi | 〃 | 〃 | **65.1 / 84.1** |
 
 Neden doğrudan kıyaslanamaz:
 

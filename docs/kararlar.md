@@ -246,3 +246,26 @@ geniş geçitte birleşme 0.8). Tek bir kapanmamış açıklık artık iki oday�
 birleştiremiyor; oda F1 0.626 → 0.706, kenar F1 0.260 → 0.322. Eşik ve
 birleşme oranında plato (0.701-0.710). Kirişler ve ayak izi ayarları
 havzayla da gerekli (etkileşim tablosu). Süre plan başına +2.1 s.
+
+**2026-10-18, dördüncü tur** ([olcumler §14](olcumler.md)): fazla odaların
+çoğu (120'nin 70'i) aşırı bölme. Kaynak, oda bölmede kapatılan
+sınıflanmamış parça boşlukları. Kirişin iki yanı cevapta aynı odaysa
+zararlı sayıldı (221 boşluğun 98'i). Zararlıların çoğunun ortak noktası
+şu: ışının çıktığı duvar ucu, iki yanı kapı boşluğuyla kesilmiş bir
+duvar hattının üstünde (koridordaki T-kavşağı) ve ışın koridoru boydan
+kesiyor. Eklenenler:
+
+- `aciklik.bosluklar(yan_suzgec="duvarli")`, yalnız oda bölmede: uçtan
+  iki yana bakılıyor; iki yanda da duvar varsa (bitişik ya da 40-220 px
+  aralıklı) boşluk kapatılmıyor. Oda F1 0.706 → 0.722, kenar F1 0.321 →
+  0.343.
+- Yarı açık çizilmiş kapılar (eşik 0.95) yalnız oda bölmede kiriş; kapı
+  listesine girmiyor. Kapıdan birleşen odaların 78/84'ünde aradaki kapı
+  bulunmamıştı. Oda F1 0.722 → 0.734; kapı ve kenar değişmedi. Süre
+  plan başına +1.1 s (ikinci açıklık taraması).
+
+**Denenip bırakılan (dördüncü tur):** dik duvara çarpan bütün boşlukları
+kapatmamak (fazla 120 → 60, ama 31 oda kaybı ve kenar F1 0.255); oda
+grafının geniş boşluklarında kısa ayak testi (35 fazla oda); yarı açık
+kapıyı kapı listesine almak (kapı F1 −0.016, kenar +0.006); duvar payı
+0.6-0.7 (kötü); ayak izi 401-501 (plato, değişmedi).

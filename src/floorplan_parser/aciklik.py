@@ -180,8 +180,36 @@ def bosluk_isini(
     return float(t[i0] - 2), float(t[i1] - 2)
 
 
+def yan_durumu(
+    duvar_maske: np.ndarray,
+    ga: np.ndarray,
+    yon: np.ndarray,
+    kalinlik: float,
+    s: np.ndarray,
+    sinir: float = 220.0,
+) -> str:
+    """Duvar ucundan yana (``s`` yönünde) bakış: uç yüzünün (``ga``) 2-9 px
+    gerisinde, duvar kalınlığının dışından başlayıp ilk duvara uzaklık.
+    ``bitisik`` (≤ 3 px), ``yakin`` (3-40), ``aralikli`` (40-``sinir``: kapı
+    boşluğu sonra duvar), ``acik``."""
+    t = np.arange(0, sinir + 1, 1.0)
+    en_yakin = None
+    for geri in (2.0, 5.0, 9.0):
+        bas = ga - geri * yon + (kalinlik / 2 + 1) * s
+        vur = np.flatnonzero(_isabet(duvar_maske, bas + t[:, None] * s))
+        if len(vur):
+            en_yakin = t[vur[0]] if en_yakin is None else min(en_yakin, t[vur[0]])
+    if en_yakin is None:
+        return "acik"
+    return "bitisik" if en_yakin <= 3 else "yakin" if en_yakin < 40 else "aralikli"
+
+
 def bosluklar(
-    parcalar: list[Parca], duvar_maske: np.ndarray, kural: AciklikKural = VARSAYILAN_ACIKLIK_KURAL
+    parcalar: list[Parca],
+    duvar_maske: np.ndarray,
+    kural: AciklikKural = VARSAYILAN_ACIKLIK_KURAL,
+    yalniz_hizali: bool = False,
+    yan_suzgec: str = "",
 ) -> list[Bosluk]:
     """Duvar uçlarından boşluk adayları.
 
@@ -189,6 +217,16 @@ def bosluklar(
     uç: ışın komşu duvarı geçer; karşıdaki duvar bu parçayla aynı doğrultuda
     olmalı (kapı köşenin dibinde, duvar kapıdan sonra sürüyor). Böylece
     T-kavşağından odanın karşısına boşluk açılmaz.
+
+    ``yalniz_hizali``: serbest uçta da karşıdaki duvar hizalı (≤ 10°, orta
+    çizgisi ≤ yarım kalınlık + 4 px) ya da parçasız olmalı. Oda bölme için:
+    dik duvarın yüzüne çarpan ışın çoğunlukla odanın ortasından geçiyor
+    (olcumler §14). Kapı adaylarında kullanılmaz (köşedeki kapı dik yüze açılır).
+
+    ``yan_suzgec``: ışının çıktığı uç kesik bir duvar hattının üstündeyse
+    (iki yanda da duvar: ``"aa"`` ikisi de aralıklı, ``"duvarli"`` aralıklı ya
+    da bitişik) boşluk atlanır; T-kavşağında iki yanı kapılı koridor duvarı
+    gibi. Yalnız oda bölme için (olcumler §14).
     """
     etiket = duvar_etiketi(parcalar, duvar_maske)
     h, w = duvar_maske.shape
@@ -205,11 +243,28 @@ def bosluklar(
             if r is None:
                 continue
             ga, gb = uc + r[0] * yon, uc + r[1] * yon
-            if kavsak:
+            if kavsak or yalniz_hizali:
                 xi = min(max(int(np.floor(gb[0] + 0.5 + yon[0])), 0), w - 1)
                 yi = min(max(int(np.floor(gb[1] + 0.5 + yon[1])), 0), h - 1)
                 e = etiket[yi, xi]
+            if kavsak:
                 if e <= 0 or e == i + 1 or aci_farki(parcalar[e - 1].aci, p.aci) > math.radians(10):
+                    continue
+            elif yalniz_hizali and e > 0:
+                q = parcalar[e - 1]
+                q_orta = (np.array([q.x1, q.y1]) + np.array([q.x2, q.y2])) / 2
+                n = np.array([-d[1], d[0]])
+                if (
+                    e == i + 1
+                    or aci_farki(q.aci, p.aci) > math.radians(10)
+                    or abs((q_orta - a) @ n) > max(p.kalinlik, q.kalinlik) / 2 + 4
+                ):
+                    continue
+            if yan_suzgec:
+                n = np.array([-d[1], d[0]])
+                yanlar = {yan_durumu(duvar_maske, ga, yon, p.kalinlik, s) for s in (n, -n)}
+                kabul = {"aralikli"} if yan_suzgec == "aa" else {"aralikli", "bitisik"}
+                if yanlar <= kabul:
                     continue
             yeni = Bosluk(tuple(map(float, ga)), tuple(map(float, gb)), p.kalinlik)
             # Aynı boşluk karşı uçtan da bulunur: orta noktalar ve genişlik yakın.

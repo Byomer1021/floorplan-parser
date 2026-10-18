@@ -29,7 +29,7 @@ from floorplan_parser.degerlendirme import (
     parca_maskesi,
     poligon_eslesmeleri,
 )
-from floorplan_parser.oda import DIS
+from floorplan_parser.oda import DIS, VARSAYILAN_ODA_KURAL
 from floorplan_parser.onisleme import ikile
 
 SONUC = Path(__file__).resolve().parents[1] / "results"
@@ -59,6 +59,11 @@ def main() -> None:
     ap.add_argument("--kismi", default="", help="ESIK:KANAT_YAN:PENCEREDE, ör. 0.9:0.15:0")
     ap.add_argument("--etiket", default="")
     ap.add_argument(
+        "--oda",
+        default="",
+        help="OdaKural alanları, ör. hizali_bosluk=1,ayak_izi_cekirdek=401",
+    )
+    ap.add_argument(
         "--stil",
         default="dolu",
         choices=["dolu", "hepsi"],
@@ -74,6 +79,13 @@ def main() -> None:
             kismi_kanat_yan=float(y),
             kismi_pencerede=bool(int(pnc)),
         )
+    oda_kural = VARSAYILAN_ODA_KURAL
+    for parca in filter(None, a.oda.split(",")):
+        ad, deger = parca.split("=")
+        tip = type(getattr(oda_kural, ad))
+        oda_kural = replace(oda_kural, **{ad: tip(int(deger)) if tip is bool else tip(deger)})
+    if a.oda:
+        print("oda kuralı:", oda_kural, flush=True)
 
     satirlar = []
     t_basla = time.perf_counter()
@@ -86,7 +98,7 @@ def main() -> None:
         if a.stil == "dolu" and dolgu < 0.8:
             continue
         t0 = time.perf_counter()
-        s = plani_coz(g, aciklik_kural=aciklik_kural)
+        s = plani_coz(g, oda_kural=oda_kural, aciklik_kural=aciklik_kural)
         sure = time.perf_counter() - t0
 
         kapi_c, pencere_c, oda_c = c.sinif("Door"), c.sinif("Window"), c.sinif("Room")

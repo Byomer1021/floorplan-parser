@@ -130,6 +130,27 @@ def test_genis_bosluk_kisa_ayak_kabul_dik_duvar_ret():
     assert genis_bosluklar([h], dik, kisa_duvar=True) == []
 
 
+def test_yan_suzgec_kesik_hattaki_uctan_kirisi_atlar():
+    # Koridor: üst duvar y=80; alt duvar y=200, bölmenin iki yanında kapı
+    # boşluklarıyla kesik (240-360 arası). Bölme (x=300) alt duvar hattında
+    # bitiyor; ucundan yukarı ışın koridoru boydan kesip üst duvara çarpar.
+    ust = _dikdortgen_parca(50, 80, 550, 80, 10.0)
+    alt_sol = _dikdortgen_parca(50, 200, 240, 200, 10.0)
+    alt_sag = _dikdortgen_parca(360, 200, 550, 200, 10.0)
+    bolme = _dikdortgen_parca(300, 200, 300, 380, 10.0)
+    parcalar = [ust, alt_sol, alt_sag, bolme]
+    duvar = parca_maskesi(parcalar, (400, 600))
+
+    def koridoru_kesen(bs):
+        return [b for b in bs if abs(b.a[0] - 300) < 2 and abs(b.b[0] - 300) < 2]
+
+    assert len(koridoru_kesen(bosluklar(parcalar, duvar))) == 1
+    suzulmus = bosluklar(parcalar, duvar, yan_suzgec="duvarli")
+    assert koridoru_kesen(suzulmus) == []
+    # Kapı boşlukları (alt duvar uçlarından bölmeye) kalır.
+    assert sum(abs(b.a[1] - 200) < 2 for b in suzulmus) == 2
+
+
 def test_poligon_iou_ve_esleme():
     kare = np.array([[0, 0], [10, 0], [10, 10], [0, 10]], float)
     kayik = kare + [5, 0]

@@ -39,12 +39,13 @@ sayı ölçüldüğü anda girer. Test bölümüne henüz bakılmadı.
   0.869, duyarlılık 0.810, F1 0.839 ([§13](docs/olcumler.md); çift kanatlı
   ve geniş pencereler eklenmeden önce 0.671). Kalan kapı hatalarının çoğu
   yarı açık çizilmiş kapılar.
-- **Oda grafı** (aynı 62 plan): oda F1 0.706 (kesinlik 0.769, duyarlılık
-  0.653), kapı kenarı F1 0.322 ([olcumler §9-11](docs/olcumler.md)). Odalar
-  uzaklık dönüşümü + watershed ile bölünüyor. Kaçan odaların en büyük payı
-  duvarsız ayrımı olan komşuyla birleşenler (bu yöntemle bulunamaz); kenar
-  için iki odanın ikisi de bulunmalı.
-- Uçtan uca `akis.plani_coz`; plan başına medyan 4.2 s.
+- **Oda grafı** (aynı 62 plan): oda F1 0.734 (kesinlik 0.841, duyarlılık
+  0.651), kapı kenarı F1 0.343 ([olcumler §9-11, §14](docs/olcumler.md)).
+  Odalar uzaklık dönüşümü + watershed ile bölünüyor. Kaçan odaların en
+  büyük payı duvarsız ayrımı olan komşuyla birleşenler (bu yöntemle
+  bulunamaz); ikincisi kapısı bulunamayan komşuyla birleşenler. Kenar için
+  iki odanın ikisi de bulunmalı.
+- Uçtan uca `akis.plani_coz`; plan başına medyan 5.3 s.
 - Eşikler geliştirme bölümünde seçildi; **test bölümünde henüz
   ölçülmedi.**
 - **Bilinen yanlış:** merdivenin taban çizgisi gibi tek duran, duvar
@@ -52,8 +53,8 @@ sayı ölçüldüğü anda girer. Test bölümüne henüz bakılmadı.
   çok gerçek duvar kaybettirdi ([§7](docs/olcumler.md)).
 - **Kapsam dışı:** taralı ve çift çizgili stiller (36 plan); yöntem bunlarda
   duvar bulmuyor (IoU ~0). Bütün stillerde (86 geliştirme planı) duvar IoU
-  ortalaması 0.666, kapı F1 0.693, oda F1 0.584
-  ([olcumler §12](docs/olcumler.md)).
+  ortalaması 0.666, kapı F1 0.693, pencere F1 0.659, oda F1 0.607
+  ([olcumler §12-14](docs/olcumler.md)).
 - **Literatür:** dolu duvarlı planlarda bulunan tek klasik duvar sayısının
   üstünde (0.908 / 0.831). Bütün stillerde öğrenilmiş yöntemlerin
   (0.77-0.89) çok altında. Kapı duyarlılığı FloorYOLO'ya yakın, pencere
@@ -71,7 +72,7 @@ sayı ölçüldüğü anda girer. Test bölümüne henüz bakılmadı.
 | 5 | Duvar | iskelet + olasılıksal Hough, eşdoğrusal birleştirme, kavşağa çekme | `duvar` | ilk sürüm |
 | 6 | Kapı | duvar ucundan ışınla boşluk + 4 varsayımlı çeyrek yay testi | `aciklik` | yazıldı |
 | 7 | Pencere | boşlukta paralel ince çizgiler; küçük yay kanatlı, iki yarım yay çift kanatlı pencere; 150-450 px geniş boşluklar da | `aciklik` | yazıldı |
-| 8 | Graf | boşlukları kirişle kapat (geniş açıklıklar dahil) + ayak izi + uzaklık dönüşümü ve watershed; kapı iki yandaki odayı bağlar | `oda`, `akis` | yazıldı |
+| 8 | Graf | boşlukları kirişle kapat (geniş açıklıklar ve yarı açık kapılar dahil; kesik duvar hattındaki uçtan kiriş yok) + ayak izi + uzaklık dönüşümü ve watershed; kapı iki yandaki odayı bağlar | `oda`, `akis` | yazıldı |
 | 9 | Değerlendirme | duvar piksel IoU; kapı/pencere/oda IoU ≥ 0.5 eşleme; kenar = kapı + iki oda | `degerlendirme`, `cvcfp` | hepsi |
 
 `sentetik` modülü cevabı bilinen plan çizer; her adımın testi önce orada
