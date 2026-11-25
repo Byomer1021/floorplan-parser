@@ -16,6 +16,12 @@ room/wall/door graph.*
 GTÜ, Görüntü İşleme dersi projesi (2026 güz). Ders kodu, takvim ve takım
 henüz kayıtlı değil.
 
+**2026-11-25'ten beri girdi, masadaki basılı bir planın telefon
+fotoğrafı.** Fotoğraf bir arayüzden yüklenir, kâğıt bulunur ve düzeltilir,
+sonra aşağıdaki akış çalışır ([K-010, K-012](docs/kararlar.md)). Sentetik
+fotoğrafla ölçüldü, gerçek fotoğrafla henüz ölçülmedi
+([olcumler §18](docs/olcumler.md)). Aşağıdaki test sonucu taranmış planlarda.
+
 **Yöntem donduruldu ve test bölümünde bir kez ölçüldü (2026-10-18, kod
 `dee7a09`).** Bu sayfaya her sayı ölçüldüğü anda girer.
 
@@ -112,6 +118,19 @@ Gerçek fotoğrafın cevabı olmadığı için ölçüm sentetik fotoğrafla
 (`foto_benzetim`). 40 derece eğimde kapı F1 0.872, pencere 0.769, oda 0.762
 (taramada 0.892 / 0.838 / 0.783). Gerçek fotoğrafla henüz ölçülmedi.
 [olcumler §18](docs/olcumler.md)
+
+### Arayüz
+
+```
+uv sync --group arayuz
+uv run --group arayuz python scripts/arayuz.py         # http://127.0.0.1:7860
+uv run --group arayuz python scripts/arayuz.py --ag    # aynı Wi-Fi'daki telefondan
+```
+
+Fotoğraf ya da tarama yüklenir, kâğıt otomatik bulunur (bulunamazsa dört
+köşeye tıklanır), "Parse" ile sonuç katmanları, oda grafı, düzeltilmiş sayfa
+ve JSON gelir. Kamerasız denemek için "Sample photo". Gradio, ayrı
+bağımlılık grubunda ([K-012](docs/kararlar.md)).
 
 ## Kısıt: öğrenilmiş model yok
 

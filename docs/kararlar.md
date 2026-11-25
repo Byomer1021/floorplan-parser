@@ -392,3 +392,34 @@ boş 0.228 ([olcumler §17](olcumler.md)).
   çizgi çiftleri (Hough) bulunur ve arası doldurulur.
 - Akışta duvar adımı tek fonksiyon (`duvar.iki_olcekli_duvarlar`). Stil
   başına bir ön adım eklenir, sonrası aynı kalır.
+
+## K-012: Arayüz: Gradio, geçerli (2026-11-26)
+
+Şart (K-010): fotoğraf bir arayüzden yüklenecek. Kod `arayuz.py`, başlatma
+`scripts/arayuz.py`.
+
+**Akış:** fotoğraf ya da tarama yüklenir (telefonda dosya seçimi kamerayı da
+açar). Kâğıt otomatik bulunur ve yeşil dörtgenle gösterilir. Bulunamazsa ya
+da yanlışsa kullanıcı dört köşeye tıklar. "Parse" ile sonuç katmanları, oda
+grafı, düzeltilmiş sayfa ve JSON (indirilebilir) gelir.
+
+- Telefon fotoğrafının EXIF yönü uygulanıyor. Telefon çoğu fotoğrafı yan
+  kaydedip doğru yönü etikete yazıyor.
+- "Input is a scan" seçeneği taranmış planı düzeltmeden akışa verir.
+- "Sample photo" kamerasız deneme için sentetik fotoğraf üretir.
+- Ekran metinleri İngilizce, demo ve sunum İngilizce.
+- Yerel ağdan erişim `--ag` ile. İnternete açık Gradio paylaşım bağlantısı
+  kullanılmıyor.
+
+**Neden Gradio:** görüntü yükleme, kamera, görüntüye tıklama (köşe
+işaretleme) ve sekmeler hazır. otonomarac projesinde de kullanıldı.
+Alternatif Flask ve kendi HTML sayfası: daha az bağımlılık, daha çok iş.
+
+**Bağımlılık:** ayrı grup (`uv sync --group arayuz`), çekirdek akış onsuz
+çalışır. Gradio kendi bağımlılığı olarak huggingface-hub getiriyor. Hiçbir
+model indirilmiyor ya da yüklenmiyor. `tests/test_ortam.py` geçiyor (kilit
+dosyasında torch, onnxruntime, transformers yok).
+
+**Denendi:** çalışan sunucuya Gradio istemcisiyle gerçek istek. EXIF'le yan
+kaydedilmiş sentetik fotoğraf yüklendi, kâğıt otomatik bulundu, 8.7 s'de 11
+kapı, 12 pencere, 13 oda. Telefonla denenmedi.
