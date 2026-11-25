@@ -393,6 +393,12 @@ boş 0.228 ([olcumler §17](olcumler.md)).
 - Akışta duvar adımı tek fonksiyon (`duvar.iki_olcekli_duvarlar`). Stil
   başına bir ön adım eklenir, sonrası aynı kalır.
 
+**Renkli dolgu (2026-11-26, [olcumler §19](olcumler.md)):** pastel dolgu
+etkisiz. Koyu ve dokulu dolgu (ahşap zemin) akışı tamamen bozuyor. Renkli
+pikselleri önce kâğıt saymak (HSV doygunluğu) ahşapı tamamen, orta tonu
+kısmen kurtarıyor. Fotoğraf yoluna eklenmedi, renkli görüntünün de
+düzeltmeden geçmesi gerekiyor.
+
 ## K-012: Arayüz: Gradio, geçerli (2026-11-26)
 
 Şart (K-010): fotoğraf bir arayüzden yüklenecek. Kod `arayuz.py`, başlatma
@@ -423,3 +429,27 @@ dosyasında torch, onnxruntime, transformers yok).
 **Denendi:** çalışan sunucuya Gradio istemcisiyle gerçek istek. EXIF'le yan
 kaydedilmiş sentetik fotoğraf yüklendi, kâğıt otomatik bulundu, 8.7 s'de 11
 kapı, 12 pencere, 13 oda. Telefonla denenmedi.
+
+## K-013: Canlı demo: Hugging Face Spaces, geçerli (2026-11-26)
+
+Hoca demoyu yerel bir adreste görmek istemeyebilir. Seçilen: arayüz
+Hugging Face Spaces'te, ücretsiz CPU katmanında (`app.py`,
+`scripts/space_yukle.py`). Kalıcı HTTPS bağlantısı olduğu için telefonda
+uygulamanın içinden kamera açılıyor. otonomarac'ın canlı demosu da aynı
+yerde.
+
+- Space deponun alt kümesi: `app.py` ve `src/floorplan_parser`. Veri seti,
+  sonuçlar ve rapor gitmez. "Sample photo" kodla çizilen örnek evi
+  kullanır (`sentetik.ev_ciz`), veri setinin lisansına takılmaz.
+- Gereksinimler yerelde test edilen sürümlerle sabit. Yalnız bu
+  gereksinimlerle kurulan temiz bir ortamda, 2 iş parçacığıyla, örnek
+  fotoğraf 10-12 s (bu makinede, Space'in işlemcisi farklı).
+- Space bir süre kullanılmazsa uyur, ilk açılış 1-2 dakika. Demodan önce
+  açılmalı.
+- Yedek: bilgisayardan Cloudflare tüneli (n8n tüneli zaten var). İnternet
+  yoksa yerel.
+- Bırakılan: respos sunucusu (restoranlar servis sırasında kullanıyor, 2 GB
+  bellek), 512 MB bellekli ücretsiz barındırmalar, Gradio'nun geçici
+  paylaşım bağlantısı.
+
+**Durum:** paket hazır, Hugging Face girişi bekliyor. Yüklenmedi.

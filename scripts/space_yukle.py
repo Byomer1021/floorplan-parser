@@ -1,8 +1,8 @@
 """Arayüzü Hugging Face Spaces'e yükler (kararlar K-013).
 
 Space deponun bir alt kümesi: ``app.py`` ve ``src/floorplan_parser``. Veri
-seti, sonuçlar, rapor ve deney betikleri gitmez. Veri seti olmadığı için
-Space'te "Sample photo" sentetik planı kullanır.
+seti, sonuçlar, rapor ve deney betikleri gitmez. "Sample photo" kodla
+çizilen örnek ev planını kullanır (``sentetik.ev_ciz``), veri seti gerekmez.
 
 Dosyalar depodan doğrudan yüklenir, geçici klasöre kopyalanmaz (bu makinede
 antivirüs %TEMP% altına .py yazılmasını engelliyor, otonomarac'ta görüldü).
@@ -53,6 +53,7 @@ sdk_version: {version("gradio")}
 python_version: "3.12"
 app_file: app.py
 pinned: false
+license: mit
 ---
 
 # Floor plan parser

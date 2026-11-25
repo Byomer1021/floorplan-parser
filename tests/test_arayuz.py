@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import pytest
 
+from floorplan_parser.akis import plani_coz
 from floorplan_parser.arayuz import (
     ELLE,
     OTOMATIK,
@@ -17,7 +18,7 @@ from floorplan_parser.arayuz import (
     sonuc_goruntusu,
 )
 from floorplan_parser.foto_benzetim import FotoAyar, foto_uret
-from floorplan_parser.sentetik import plan_ciz
+from floorplan_parser.sentetik import ev_ciz, plan_ciz
 
 
 def _sayfa() -> np.ndarray:
@@ -64,6 +65,15 @@ def test_tarama_kipi_duzeltme_yapmaz():
 def test_kagit_yoksa_hata():
     with pytest.raises(ValueError, match="corners"):
         coz(np.full((600, 800), 120, np.uint8))
+
+
+def test_ornek_ev_planinin_hepsi_bulunur():
+    e = ev_ciz()
+    assert e.goruntu.shape == (2480, 3508)  # A4 yatay, 300 dpi
+    s = plani_coz(e.goruntu)
+    assert len(s.kapilar) == e.kapi_sayisi == 8
+    assert len(s.pencereler) == e.pencere_sayisi == 13
+    assert s.graf.number_of_nodes() - 1 == e.oda_sayisi == 8
 
 
 def test_foto_oku_exif_yonunu_uygular(tmp_path):

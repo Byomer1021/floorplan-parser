@@ -136,3 +136,142 @@ def plan_ciz(
         goruntu[ters] = KAGIT - goruntu[ters]
 
     return SentetikPlan(goruntu, maske, duvarlar, [kapi], [pencere])
+
+
+@dataclass
+class EvPlani:
+    """Arayüzün örnek planı: A4 yatay sayfa, 300 dpi (CVC-FP ölçeği)."""
+
+    goruntu: np.ndarray
+    duvar_maskesi: np.ndarray
+    kapi_sayisi: int
+    pencere_sayisi: int
+    oda_sayisi: int
+
+
+# Sekiz oda: üstte yatak odası 1, banyo, yatak odası 2 ve 3. Altta salon,
+# koridor (sağa uzanan), mutfak, çalışma odası. Dış duvar 28 px, iç 14 px.
+_DIS, _IC = 28, 14
+_X0, _Y0, _X1, _Y1 = 550, 420, 2950, 1920
+# (yön, sabit, başlangıç, bitiş, kalınlık): "y" yatay duvar y=sabit, "x" dikey.
+_EV_DUVARLARI = [
+    ("y", _Y0, _X0, _X1, _DIS),
+    ("y", _Y1, _X0, _X1, _DIS),
+    ("x", _X0, _Y0, _Y1, _DIS),
+    ("x", _X1, _Y0, _Y1, _DIS),
+    ("y", 1120, _X0, _X1, _IC),
+    ("y", 1320, 1650, _X1, _IC),
+    ("x", 1250, _Y0, 1120, _IC),
+    ("x", 1650, _Y0, _Y1, _IC),
+    ("x", 2300, _Y0, 1120, _IC),
+    ("x", 2300, 1320, _Y1, _IC),
+]
+# Kapı: (duvar yönü, sabit, boşluk başı, genişlik, menteşe başta mı, açılış yönü ±1, kalınlık)
+_EV_KAPILARI = [
+    ("y", 1120, 900, 95, True, -1, _IC),  # yatak 1 → salon
+    ("y", 1120, 1400, 90, True, -1, _IC),  # banyo → salon
+    ("y", 1120, 1850, 95, True, -1, _IC),  # yatak 2 → koridor
+    ("y", 1120, 2500, 95, False, -1, _IC),  # yatak 3 → koridor
+    ("x", 1650, 1170, 95, True, 1, _IC),  # salon → koridor
+    ("y", 1320, 1850, 95, True, 1, _IC),  # mutfak → koridor
+    ("y", 1320, 2500, 95, False, 1, _IC),  # çalışma → koridor
+    ("x", _X1, 1170, 105, True, -1, _DIS),  # giriş
+]
+# Pencere: (duvar yönü, sabit, başlangıç, bitiş)
+_EV_PENCERELERI = [
+    ("y", _Y0, 760, 960),
+    ("y", _Y0, 1380, 1520),
+    ("y", _Y0, 1880, 2080),
+    ("y", _Y0, 2520, 2720),
+    ("x", _X0, 650, 850),
+    ("x", _X0, 1400, 1640),
+    ("y", _Y1, 900, 1200),
+    ("y", _Y1, 1880, 2080),
+    ("y", _Y1, 2520, 2720),
+    ("x", _X1, 650, 850),
+    ("x", _X1, 1500, 1700),
+    ("y", _Y0, 2170, 2260),
+    ("x", _X0, 950, 1080),
+]
+_EV_ODALARI = [
+    ("BEDROOM 1", 900, 770),
+    ("BATH", 1450, 770),
+    ("BEDROOM 2", 1975, 770),
+    ("BEDROOM 3", 2625, 770),
+    ("LIVING ROOM", 1100, 1520),
+    ("HALL", 2300, 1220),
+    ("KITCHEN", 1975, 1620),
+    ("STUDY", 2625, 1620),
+]
+
+
+def _bant(yon: str, sabit: int, a: int, b: int, h: int) -> tuple[slice, slice]:
+    """Duvar boyunca [a, b) aralığında, orta çizgiden ±h bant (satır, sütun)."""
+    if yon == "y":
+        return slice(sabit - h, sabit + h), slice(a, b)
+    return slice(a, b), slice(sabit - h, sabit + h)
+
+
+def _nokta(yon: str, sabit: int, t: float) -> tuple[float, float]:
+    return (t, sabit) if yon == "y" else (sabit, t)
+
+
+def ev_ciz(ince: int = 2) -> EvPlani:
+    """Sekiz odalı örnek ev, cevabı bilinen sayılarla. Kapı çeyrek yayla,
+    pencere boşlukta üç paralel ince çizgiyle, oda adları yazıyla."""
+    yuk, gen = 2480, 3508
+    maske = np.zeros((yuk, gen), np.uint8)
+    for yon, sabit, a, b, kal in _EV_DUVARLARI:
+        h = kal // 2
+        satir, sutun = _bant(yon, sabit, a - h, b + h, h)
+        maske[satir, sutun] = 255
+    for yon, sabit, a, w, _, _, kal in _EV_KAPILARI:
+        maske[_bant(yon, sabit, a, a + w, kal // 2 + 1)] = 0
+    for yon, sabit, a, b in _EV_PENCERELERI:
+        maske[_bant(yon, sabit, a, b, _DIS // 2 + 1)] = 0
+    goruntu = np.where(maske > 0, MUREKKEP, KAGIT).astype(np.uint8)
+
+    for yon, sabit, a, w, bastan, acilis, _ in _EV_KAPILARI:
+        mentese = np.array(_nokta(yon, sabit, a if bastan else a + w), float)
+        boy = np.array((1.0, 0.0) if yon == "y" else (0.0, 1.0)) * (1 if bastan else -1)
+        normal = np.array((0.0, 1.0) if yon == "y" else (1.0, 0.0)) * acilis
+        kanat = mentese + w * normal
+        cv2.line(goruntu, tuple(map(round, mentese)), tuple(map(round, kanat)), MUREKKEP, ince)
+        a1 = np.degrees(np.arctan2(boy[1], boy[0])) % 360
+        a2 = np.degrees(np.arctan2(normal[1], normal[0])) % 360
+        bas, son = sorted((a1, a2))
+        if son - bas > 180:
+            bas, son = son, bas + 360
+        merkez = tuple(map(round, mentese))
+        cv2.ellipse(goruntu, merkez, (w, w), 0, bas, son, MUREKKEP, ince)
+
+    h = _DIS // 2
+    for yon, sabit, a, b in _EV_PENCERELERI:
+        for d in (-h, 0, h - 1):
+            p = _nokta(yon, sabit + d, a)
+            q = _nokta(yon, sabit + d, b - 1)
+            cv2.line(goruntu, tuple(map(round, p)), tuple(map(round, q)), MUREKKEP, ince)
+
+    for ad, x, y in _EV_ODALARI:
+        (tw, th), _ = cv2.getTextSize(ad, cv2.FONT_HERSHEY_SIMPLEX, 1.4, 3)
+        cv2.putText(
+            goruntu,
+            ad,
+            (x - tw // 2, y + th // 2),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1.4,
+            MUREKKEP,
+            3,
+            cv2.LINE_AA,
+        )
+    cv2.putText(
+        goruntu,
+        "Sample plan (synthetic)",
+        (_X0, 2200),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        2.4,
+        MUREKKEP,
+        5,
+        cv2.LINE_AA,
+    )
+    return EvPlani(goruntu, maske, len(_EV_KAPILARI), len(_EV_PENCERELERI), len(_EV_ODALARI))

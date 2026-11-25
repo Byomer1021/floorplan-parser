@@ -181,23 +181,15 @@ def foto_oku(yol: str | Path) -> np.ndarray:
 
 
 def ornek_foto(tohum: int | None = None) -> np.ndarray:
-    """Kamerasız deneme için sentetik fotoğraf (RGB). Veri seti yerelde
-    varsa bir CVC-FP planından, yoksa sentetik plandan."""
-    from floorplan_parser.cvcfp import ornekler, yukle
+    """Kamerasız deneme için sentetik fotoğraf (RGB): örnek ev planı
+    (``sentetik.ev_ciz``), rastgele 15-35 derece eğimle. Plan kodla çizildiği
+    için lisans sorunu yok, yerelde ve Space'te aynı örnek."""
     from floorplan_parser.foto_benzetim import FotoAyar, foto_uret
-    from floorplan_parser.sentetik import plan_ciz
+    from floorplan_parser.sentetik import ev_ciz
 
     rng = np.random.default_rng(tohum)
-    try:
-        o = next(o for o in ornekler(bolum="gelistirme") if o.ad == "IIa_AP3401")
-        sayfa, _ = yukle(o)
-    except (FileNotFoundError, StopIteration):
-        p = plan_ciz().goruntu
-        sayfa = np.full((1400, 990), 255, np.uint8)
-        y, x = (1400 - p.shape[0]) // 2, (990 - p.shape[1]) // 2
-        sayfa[y : y + p.shape[0], x : x + p.shape[1]] = p
     ayar = FotoAyar(egim=float(rng.uniform(15, 35)), tohum=int(rng.integers(10**9)))
-    f = foto_uret(sayfa, ayar)
+    f = foto_uret(ev_ciz().goruntu, ayar)
     return cv2.cvtColor(f.goruntu, cv2.COLOR_GRAY2RGB)
 
 

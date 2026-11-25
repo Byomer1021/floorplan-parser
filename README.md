@@ -172,3 +172,8 @@ docs/literatur.md       yayımlanmış sonuçlarla kıyas
 docs/gunluk/            günlük çalışma kaydı
 results/                deney CSV'leri; results/ara/ görseller (depoya girmez)
 ```
+
+## Lisans
+
+Kod MIT lisanslı ([LICENSE](LICENSE)). CVC-FP veri seti depoda yok, kendi
+lisansı var ([data/README.md](data/README.md)).

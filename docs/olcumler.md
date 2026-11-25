@@ -1091,3 +1091,39 @@ Kâğıda göre eşikle (`--ikile kagit`, uygulamadaki `foto.fotograftan_coz`):
 - Sıradaki ölçüm gerçek fotoğraf: birkaç geliştirme planını basıp çekmek.
   Cevabı taşımak için düzeltilmiş fotoğraf orijinal taramaya kayıtlanır
   (özellik eşleme ve RANSAC homografisi, klasik).
+
+## §19 Renkli kat planı: oda dolgusu (2026-11-26)
+
+İnternetteki planların çoğu renkli (pastel oda dolgusu, ahşap zemin,
+mobilya). CVC-FP siyah beyaz. Etkiyi görmek için 8 geliştirme planının
+(§18'deki ikileme planları) odaları cevaptaki oda poligonlarıyla boyandı,
+çizgiler çarpma karışımıyla üstte kaldı. Fotoğraf yok, sayfa doğrudan.
+`scripts/renk_deney.py`.
+
+Dolgunun gri karşılığı: pastel 233-240, orta 200-209, ahşap 131-160
+(çizgili doku). *doygun*: renkli pikseller (HSV doygunluk > 60, parlaklık >
+60) önce kâğıt sayılır, sonra kâğıda göre eşik.
+
+| dolgu | ikileme | duvar IoU | kapı | pencere | oda | kenar |
+|---|---|---|---|---|---|---|
+| yok | otsu | 0.915 | 0.895 | 0.766 | 0.800 | 0.440 |
+| pastel | otsu, kagit, doygun | 0.915 | 0.895 | 0.766 | 0.800 | 0.440 |
+| orta | otsu | 0.915 | 0.895 | 0.766 | 0.800 | 0.440 |
+| orta | kagit | 0.850 | 0.595 | 0.643 | 0.525 | 0.105 |
+| orta | doygun | 0.881 | 0.752 | 0.732 | 0.689 | 0.235 |
+| ahşap | otsu | 0.124 | 0.000 | 0.613 | 0.000 | 0.000 |
+| ahşap | kagit | 0.124 | 0.000 | 0.547 | 0.000 | 0.000 |
+| ahşap | doygun | 0.915 | 0.895 | 0.766 | 0.800 | 0.440 |
+
+- **Pastel dolgu etkisiz.** Kâğıda göre eşiğin altında kalmıyor.
+- **Koyu ve dokulu dolgu akışı tamamen bozuyor.** Ahşap zemin mürekkep
+  sayılıyor: duvar IoU 0.124, kapı ve oda 0.
+- **Orta ton fotoğraf yolunu bozuyor, taramayı bozmuyor.** Otsu eşiği
+  dolgunun altına düşüyor, kâğıda göre eşik (kâğıttan 50 koyu) dolguyu
+  mürekkep sayıyor.
+- **Doygunlukla eleme ahşapı tamamen kurtarıyor**, orta tonu kısmen (kapı
+  0.752). Az doygun tonlar (gri pembe, doygunluk 49) elemeden geçiyor.
+- Fotoğraf yolu şu an gri çalışıyor (`arayuz.gri_yap`). Doygunluk elemesi
+  için renkli görüntünün düzeltmeden geçmesi gerekir. Yapılmadı.
+- Sınır: renk sentetik ve yalnız oda dolgusu. Mobilya, gölge, 3B çizim ve
+  koyu zeminde açık çizgi (mavi kopya) denenmedi.
