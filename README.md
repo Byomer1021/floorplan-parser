@@ -96,6 +96,23 @@ Geliştirmede ölçülen (yöntem seçimi bunlarla yapıldı):
 `sentetik` modülü cevabı bilinen plan çizer; her adımın testi önce orada
 geçer.
 
+### Fotoğraftan
+
+Masadaki bir planın açılı telefon fotoğrafı, akıştan önce taranmış sayfaya
+çevrilir ([K-010](docs/kararlar.md), `foto.fotograftan_coz`):
+
+| # | Adım | Yöntem | Modül |
+|---|---|---|---|
+| F1 | Kâğıdı bul | Otsu ya da Canny ile kâğıt bölgesi, dörtgen, kenar kesitiyle köşe iyileştirme | `foto` |
+| F2 | Perspektif | dört köşeden homografi, A4 300 dpi | `foto` |
+| F3 | Işık | kâğıt parlaklığına bölme (flat-field) | `foto` |
+| F4 | İkileme | kâğıttan 50 gri seviye koyu her piksel mürekkep, duvar maskesi Otsu ile kırpılır | `foto` |
+
+Gerçek fotoğrafın cevabı olmadığı için ölçüm sentetik fotoğrafla
+(`foto_benzetim`). 40 derece eğimde kapı F1 0.872, pencere 0.769, oda 0.762
+(taramada 0.892 / 0.838 / 0.783). Gerçek fotoğrafla henüz ölçülmedi.
+[olcumler §18](docs/olcumler.md)
+
 ## Kısıt: öğrenilmiş model yok
 
 YOLO, CNN, segmentasyon ağı, önceden eğitilmiş ağırlık kullanılmıyor
@@ -112,6 +129,7 @@ uv run python scripts/duvar_deney.py --grup I-II --kalinlik 13 --yontem iki
 uv run python scripts/aciklik_deney.py
 uv run python scripts/oda_deney.py
 uv run python scripts/degerlendir.py --bolum gelistirme   # uçtan uca
+uv run python scripts/foto_deney.py --ikile kagit --ham 0  # sentetik fotoğrafta
 uv run python scripts/demo.py --cvcfp IIa_AP3301        # demo: katmanlı görüntü + graf JSON
 uv run python scripts/demo.py yol/plan.png              # herhangi bir plan görüntüsü
 uv run python scripts/sekiller.py                       # rapor şekilleri → rapor/sekiller/

@@ -36,3 +36,7 @@ rapor/*.out
 
 # demo çıktıları (scripts/demo.py)
 results/demo/
+
+# fotoğraf deneyinin örnek görselleri ve konsol çıktısı (scripts/foto_deney.py)
+results/foto/ornek/
+results/foto/*.log

@@ -36,6 +36,10 @@ kestirim. OpenCV, scikit-image, scipy.
 **Uygulama:** `tests/test_ortam.py` kilit dosyasında derin öğrenme
 kütüphanesi bulursa düşer.
 
+**2026-11-25, Habil hocayla görüşme (Ömer Can aktardı):** şart, hazır CNN,
+YOLO ve benzeri modelleri kullanmamak. Kapsam dışı listesi aynı kalıyor.
+Fotoğraf girdisi için eklenen adımlar da klasik (K-010).
+
 ## K-003: Veri seti: CVC-FP, geçerli (2026-10-17)
 
 **2026-10-17: CVC-FP alındı** (gerekirse başka set sonradan eklenir). İndirme, sha256, lisans ve içerik:
@@ -320,3 +324,71 @@ kapatmamak (fazla 120 → 60, ama 31 oda kaybı ve kenar F1 0.255); oda
 grafının geniş boşluklarında kısa ayak testi (35 fazla oda); yarı açık
 kapıyı kapı listesine almak (kapı F1 −0.016, kenar +0.006); duvar payı
 0.6-0.7 (kötü); ayak izi 401-501 (plato, değişmedi).
+
+## K-010: Fotoğraf girdisi: kâğıdı bul, homografi, ışık ve ikileme, geçerli (2026-11-25)
+
+Habil hocayla görüşmeden çıkan şart (Ömer Can aktardı, 2026-11-25): masadaki
+gerçek bir kat planı farklı açılardan fotoğraflanıp bir arayüze yüklenecek.
+Akış taranmış, düz ve sabit ölçekli sayfa varsayıyordu. Ham fotoğrafta duvar
+IoU 0.02-0.04, 40 derecede kapı F1 0.236 ([olcumler §18](olcumler.md)).
+
+**Seçilen** (`foto.fotograftan_coz`), hepsi klasik (K-002):
+
+1. Kâğıdı bul (`kagit_bul`). Küçültülmüş görüntüde Otsu ile açık bölge,
+   olmazsa Canny kenarlarıyla çevrili bölge. Çerçeveye değmeyen en büyük
+   bileşenin dışbükey zarfından dörtgen, kenarlara doğru uydurma, sonra tam
+   çözünürlükte kenara dik parlaklık kesitiyle köşe iyileştirme. Bulunamazsa
+   arayüz köşeleri kullanıcıya sorar.
+2. Perspektif düzeltme (`duzelt`). Dört köşeden homografi, A4 300 dpi sayfa.
+   Kâğıt düz bir yüzey olduğu için tek homografi yeter. Her fotoğraf tek
+   başına düzeltilir, birden çok açı gerekmez.
+3. Işık düzeltme (`isik_duzelt`). Kâğıdın parlaklığı mürekkebi silen bir
+   kapamayla kestirilir, görüntü ona bölünür.
+4. İkileme (`foto_ikile`). Kâğıttan 50 gri seviye koyu olan her piksel
+   mürekkep, böylece bulanıklaşmış ince çizgiler (kapı yayı, pencere) bütün
+   kalır. Çıktıdaki duvar maskesi Otsu'nun sıkı mürekkebiyle kırpılır.
+5. Sonrası değişmeden akış (`akis.plani_coz`).
+
+Sentetik fotoğrafta, 40 derece, otomatik köşe: kapı 0.872, pencere 0.769,
+oda 0.762, duvar IoU 0.869 (taramada 0.892 / 0.838 / 0.783 / 0.909).
+
+**Varsayımlar:** kâğıt masadan açık renkli, dört köşesi fotoğrafın içinde,
+kâğıt A4 ve plan sayfaya CVC-FP'deki ölçekte basılmış, kâğıt düz.
+
+**Denenip bırakılan:** Sauvola (duvar IoU 0.69, pencere 0.19). Kalın
+mürekkebin çevresini düşük eşikten çıkarmak (duvar geri geliyor ama kapı
+ve kenar düşüyor). Otsu ile köşeyi yalnız parlak bölgeden bulmak (masanın
+aydınlık bir köşesi kâğıda karıştı, bir fotoğrafta 408 px hata).
+
+**Açık:**
+
+- Gerçek fotoğrafla ölçüm. Sentetik benzetimde parlama, odak, lens
+  bozulması ve kıvrık kâğıt yok.
+- Buruşturulmuş kâğıt. Düz kırışık izleriyle benzetildi (10 izde pencere
+  0.668, oda 0.714). Gerçek buruşturma daha düzensiz, tek homografi yetmez.
+  Yol: duvarların düz olduğu varsayımıyla yerel düzeltme.
+- Ölçek kestirimi (başka kâğıt boyutu, başka çizim ölçeği).
+- Arayüz.
+
+## K-011: Duvar stili: dolu varsayılıyor, taralı ve çift çizgi için yol açık, açık (2026-11-25)
+
+Hocanın masaya koyacağı planın stili bilinmiyor. Şimdilik dolu (içi siyah)
+duvar varsayılıyor. Taralı ve çift çizgili duvarlar için yol açık
+tutulacak.
+
+CVC-FP'de bu stiller var ve cevapları da var, ölçülebilir. sayi (10),
+image (18) ve p (4) grupları taralı ya da çift çizgi (duvar dolgusu
+0.23-0.57), I-II'de 4 plan içi boş ([olcumler §3](olcumler.md)). Bugünkü akış
+test bölümünde bunlarda duvar IoU image 0.000, sayi 0.071, p 0.000, I-II içi
+boş 0.228 ([olcumler §17](olcumler.md)).
+
+**Düşünülen (klasik):**
+
+- Stil tespiti. Dolu duvarda kalın açmadan sonra kalan mürekkep payı yüksek,
+  taralı ve çift çizgide düşük. Cevap gerekmez.
+- Taralı duvar. Tarama çizgileri sık ve paralel. Çizgi aralığından büyük
+  çekirdekle kapama bölgeyi doldurur, sonrası dolu duvar akışı.
+- Çift çizgi. Aynı doğrultuda, duvar kalınlığı kadar aralıklı paralel
+  çizgi çiftleri (Hough) bulunur ve arası doldurulur.
+- Akışta duvar adımı tek fonksiyon (`duvar.iki_olcekli_duvarlar`). Stil
+  başına bir ön adım eklenir, sonrası aynı kalır.

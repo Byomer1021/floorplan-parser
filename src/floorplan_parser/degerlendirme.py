@@ -1,4 +1,4 @@
-"""Değerlendirme: piksel IoU ve duvar parçası eşleme."""
+"""Değerlendirme: piksel IoU, duvar parçası eşleme ve plan başına puan."""
 
 import math
 from collections.abc import Sequence
@@ -7,6 +7,7 @@ import cv2
 import numpy as np
 
 from floorplan_parser.duvar import Parca, aci_farki, dortgen_ciz
+from floorplan_parser.oda import DIS
 
 
 def iou(a: np.ndarray, b: np.ndarray) -> float:
@@ -132,3 +133,84 @@ def bolge_eslesmeleri(
             cj.add(j)
             ciftler.append((e, j, v))
     return ciftler
+
+
+def kutu(p: np.ndarray) -> np.ndarray:
+    """Poligonun eksen hizalı sınır kutusu, 4 köşe (kutu IoU'lu eşleme için)."""
+    (x0, y0), (x1, y1) = p.min(0), p.max(0)
+    return np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], float)
+
+
+def cevap_kenarlari(c) -> dict:
+    """Cevaptaki kapı kenarları: kapı id'si → iki odanın id'si."""
+    sinif = {n.id: n.sinif for n in c.nesneler}
+    kenar = {}
+    for tip, ids in c.iliskiler:
+        if tip != "access":
+            continue
+        oda_ids = frozenset(i for i in ids if sinif.get(i) == "Room")
+        if any(sinif.get(i) == "Door" for i in ids) and len(oda_ids) == 2:
+            kenar[next(i for i in ids if sinif.get(i) == "Door")] = oda_ids
+    return kenar
+
+
+def plan_puani(s, c, cevap_duvar: np.ndarray) -> dict:
+    """Bir planın bütün ölçüleri (``scripts/degerlendir.py`` sütunları).
+
+    ``s``: ``akis.PlanSonucu``. ``c``: ``cvcfp.Cevap``, tahminle aynı
+    koordinatta. ``cevap_duvar``: ``cvcfp.maske(c, "Wall")``.
+    """
+    kapi_c, pencere_c, oda_c = c.sinif("Door"), c.sinif("Window"), c.sinif("Room")
+    kapi_es = dict(
+        poligon_eslesmeleri([k.poligon() for k in s.kapilar], [n.noktalar for n in kapi_c])
+    )
+    pencere_d = len(
+        poligon_eslesmeleri([p.poligon() for p in s.pencereler], [n.noktalar for n in pencere_c])
+    )
+    kapi_kutu = len(
+        poligon_eslesmeleri(
+            [kutu(k.poligon()) for k in s.kapilar], [kutu(n.noktalar) for n in kapi_c]
+        )
+    )
+    pencere_kutu = len(
+        poligon_eslesmeleri(
+            [kutu(p.poligon()) for p in s.pencereler], [kutu(n.noktalar) for n in pencere_c]
+        )
+    )
+    oda_es = {
+        e: oda_c[j].id for e, j, _ in bolge_eslesmeleri(s.oda_etiket, [n.noktalar for n in oda_c])
+    }
+    cevap_kenar = cevap_kenarlari(c)
+    oda_oda = [(u, v, d["kapi"]) for u, v, d in s.graf.edges(data=True) if DIS not in (u, v)]
+    kenar_d = sum(
+        1
+        for u, v, i in oda_oda
+        if i in kapi_es
+        and u in oda_es
+        and v in oda_es
+        and cevap_kenar.get(kapi_c[kapi_es[i]].id) == frozenset((oda_es[u], oda_es[v]))
+    )
+    n_oda = s.graf.number_of_nodes() - 1
+    return {
+        "duvar_maske_iou": round(iou(s.duvar_maske, cevap_duvar), 4),
+        "duvar_kesisim": int(((s.duvar_maske > 0) & (cevap_duvar > 0)).sum()),
+        "duvar_birlesim": int(((s.duvar_maske > 0) | (cevap_duvar > 0)).sum()),
+        "duvar_parca_iou": round(
+            iou(parca_maskesi(s.kalin_parcalar + s.ince_parcalar, cevap_duvar.shape), cevap_duvar),
+            4,
+        ),
+        "kapi_dogru": len(kapi_es),
+        "kapi_fazla": len(s.kapilar) - len(kapi_es),
+        "kapi_eksik": len(kapi_c) - len(kapi_es),
+        "kapi_kutu_dogru": kapi_kutu,
+        "pencere_dogru": pencere_d,
+        "pencere_fazla": len(s.pencereler) - pencere_d,
+        "pencere_eksik": len(pencere_c) - pencere_d,
+        "pencere_kutu_dogru": pencere_kutu,
+        "oda_dogru": len(oda_es),
+        "oda_fazla": n_oda - len(oda_es),
+        "oda_eksik": len(oda_c) - len(oda_es),
+        "kenar_dogru": kenar_d,
+        "kenar_fazla": len(oda_oda) - kenar_d,
+        "kenar_eksik": len(cevap_kenar) - kenar_d,
+    }

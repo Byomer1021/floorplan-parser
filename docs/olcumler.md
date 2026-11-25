@@ -969,3 +969,125 @@ image 0.000 (5), sayi 0.071 (3), p 0.000 (1).
 - Pencere kutu IoU'lu F1 testte 0.03 düşük; poligon IoU'lu F1 aynı.
 - Süre farkı koşu koşullarından (aynı makine, art arda); ölçüm amaçlı
   değil.
+
+## §18 Fotoğraf girdisi: sentetik telefon fotoğrafı (2026-11-25)
+
+Yeni şart ([K-010](kararlar.md)): masadaki gerçek bir planın açılı
+fotoğrafı arayüzden yüklenecek. Gerçek fotoğrafın cevabı yok. Bu yüzden
+geliştirme bölümünün 62 dolu planından sentetik fotoğraf üretildi
+(`foto_benzetim`) ve cevap aynı dönüşümle fotoğrafa taşındı. Tarama ile
+fotoğraf aynı ölçüyle kıyaslanıyor. Test bölümüne dokunulmadı.
+`scripts/foto_deney.py` → `results/foto/foto_deney.csv` (Otsu) ve
+`foto_deney_kagit.csv` (`--ikile kagit`).
+
+**Benzetilen:** kamera eğimi 0, 20 ve 40 derece (eğimin yönü rastgele),
+kâğıdın ±8 derece dönmesi, koyu ve dokulu masa, doğrusal ışık düşüşü (%30)
+ve yumuşak gölge (%25), bulanıklık (σ 0.8), gürültü (σ 4), JPEG 85.
+Fotoğrafın merkezinde ölçek taramayla aynı. Kırışık: kâğıdı boydan geçen 4
+ya da 10 düz iz, iz boyunca koyu çizgi ve bir yanda gölge, birkaç piksellik
+yerel kayma.
+
+**Kipler:** *ham* fotoğrafı doğrudan akışa verir. *kahin* gerçek köşelerle
+perspektifi ve ışığı düzeltir (arayüzde köşeleri kullanıcının işaretlemesine
+denk). *oto* köşeleri `foto.kagit_bul` ile bulur.
+
+**Kâğıt bulma:** 372 fotoğrafın hepsinde bulundu. Gerçek köşeye en büyük
+uzaklık medyan 0.97 px, %95'te 1.30, en çok 1.56.
+
+Bugünkü akış, düzeltilmiş sayfa doğrudan akışın Otsu'suna (F1, duvar için
+plan başına IoU ortalaması):
+
+| koşul | duvar IoU | kapı | pencere | oda | kenar |
+|---|---|---|---|---|---|
+| tarama | 0.909 | 0.892 | 0.838 | 0.783 | 0.392 |
+| ham, 0° | 0.042 | 0.847 | 0.602 | 0.672 | 0.253 |
+| ham, 20° | 0.034 | 0.825 | 0.555 | 0.666 | 0.302 |
+| ham, 40° | 0.024 | 0.236 | 0.410 | 0.422 | 0.081 |
+| oto, 0° | 0.899 | 0.784 | 0.295 | 0.758 | 0.356 |
+| oto, 20° | 0.901 | 0.746 | 0.270 | 0.733 | 0.312 |
+| oto, 40° | 0.900 | 0.570 | 0.230 | 0.707 | 0.184 |
+| oto, 20°, 4 kırışık | 0.897 | 0.567 | 0.198 | 0.656 | 0.192 |
+| oto, 20°, 10 kırışık | 0.892 | 0.561 | 0.177 | 0.654 | 0.160 |
+
+Tarama satırı §17'nin geliştirme sütunuyla birebir aynı (kapı 464/21/91,
+pencere 458/61/116, oda 433/71/169, kenar 152/189/282). Puanlama
+`degerlendirme.plan_puani`'ye taşındı, `degerlendir.py` de onu kullanıyor.
+
+- **Ham fotoğraf çalışmıyor.** Otsu masayı mürekkep sayıyor, duvar IoU
+  0.02-0.04. 40 derecede kapı 0.236: perspektifte yay elipse dönüyor,
+  duvarlar eksene hizalı değil.
+- **Perspektif ve ışık düzeltmesi duvarı ve odayı geri getiriyor** (0.90,
+  0.71-0.76). Otomatik köşe kahin kadar iyi.
+- **Kapı ve pencere düşük kalıyor.** Sebep ince çizgi. Taramada 1-2
+  piksellik çizgi (kapı yayı, pencerenin paralel çizgileri) fotoğrafta
+  bulanıklaşıp açık griye dönüyor ve Otsu onu kesik kesik bırakıyor. Ham
+  fotoğrafta kapının daha iyi çıkması da bunu destekliyor: koyu masa Otsu
+  eşiğini yukarı çekiyor, ince çizgi bütün kalıyor.
+
+**İkileme seçimi** (`scripts/foto_esik_deney.py`, 8 geliştirme planı,
+kahin köşe, ışık düzeltilmiş). *kagitN*: kâğıdın parlaklığından (sayfa
+medyanı) N gri seviye koyu her piksel mürekkep. *_kirp*: çıktıdaki duvar
+maskesi Otsu mürekkebiyle kırpılır. *karma40_H*: Otsu mürekkebi ve düşük
+eşikten gelenler, kalın mürekkebin H piksellik çevresi hariç.
+
+| yöntem | duvar 0° | kapı 0° | pencere 0° | duvar 40° | kapı 40° | pencere 40° | oda 40° | kenar 40° |
+|---|---|---|---|---|---|---|---|---|
+| otsu | 0.907 | 0.715 | 0.222 | 0.905 | 0.495 | 0.208 | 0.727 | 0.296 |
+| kagit25 | 0.837 | 0.853 | 0.724 | 0.814 | 0.827 | 0.679 | 0.681 | 0.442 |
+| kagit40 | 0.858 | 0.882 | 0.734 | 0.854 | 0.895 | 0.689 | 0.807 | 0.598 |
+| kagit60 | 0.869 | 0.829 | 0.730 | 0.875 | 0.861 | 0.612 | 0.770 | 0.460 |
+| kagit40_kirp | 0.867 | 0.882 | 0.734 | 0.865 | 0.895 | 0.689 | 0.807 | 0.598 |
+| **kagit50_kirp** | 0.872 | 0.899 | 0.795 | 0.872 | 0.887 | 0.700 | 0.800 | 0.684 |
+| sauvola | 0.691 | 0.869 | 0.190 | 0.681 | 0.800 | 0.207 | 0.684 | 0.286 |
+| karma40_1 | 0.901 | 0.851 | 0.742 | 0.897 | 0.832 | 0.676 | 0.792 | 0.362 |
+| karma40_3 | 0.902 | 0.846 | 0.755 | 0.900 | 0.840 | 0.703 | 0.795 | 0.438 |
+
+- Kâğıda göre eşik ince çizgiyi bütün tutuyor. Bedeli, kalın çizginin
+  kenarındaki bulanıklık payının da mürekkep sayılması. Kırpma duvar
+  IoU'suna yalnız +0.01 getiriyor, kalan kayıp başka yerden (pencere
+  çerçevesi gibi duvara yapışık ince çizgiler duvara karışıyor olabilir,
+  bakılmadı).
+- Karma duvarı geri getiriyor ama kapıyı ve kenarı düşürüyor. Sauvola
+  duvarı da pencereyi de bozuyor.
+- **kagit50_kirp seçildi** (`foto.foto_ikile`). 8 planda kenar çok oynak
+  (kagit60'ta 0.283, kagit50'de 0.673). Seçim bu 8 plana dayanıyor ve bu
+  planlar aşağıdaki 62'nin içinde, hafif iyimserlik payı var.
+
+Kâğıda göre eşikle (`--ikile kagit`, uygulamadaki `foto.fotograftan_coz`):
+
+| koşul | duvar IoU | kapı | pencere | oda | kenar |
+|---|---|---|---|---|---|
+| tarama | 0.909 | 0.892 | 0.838 | 0.783 | 0.392 |
+| oto, 0° | 0.872 | 0.882 | 0.789 | 0.768 | 0.421 |
+| oto, 20° | 0.870 | 0.875 | 0.793 | 0.748 | 0.374 |
+| oto, 40° | 0.869 | 0.872 | 0.769 | 0.762 | 0.393 |
+| oto, 40°, ışık düzeltmesiz | 0.881 | 0.842 | 0.609 | 0.748 | 0.372 |
+| kahin, 40° | 0.867 | 0.863 | 0.744 | 0.733 | 0.410 |
+| oto, 20°, 4 kırışık | 0.867 | 0.857 | 0.729 | 0.731 | 0.364 |
+| oto, 20°, 10 kırışık | 0.864 | 0.848 | 0.668 | 0.714 | 0.325 |
+
+40 derecede oto, D/F/E: kapı 460/40/95 (taramada 464/21/91), pencere
+420/99/154 (458/61/116), oda 439/111/163 (433/71/169).
+
+- **Fotoğraf yolu taramaya yaklaşıyor.** 40 derecede kapı −0.020, pencere
+  −0.069, oda −0.021, duvar IoU −0.040. Kapıda kayıp fazla tespitten
+  (21 → 40). Pencerede hem fazla (61 → 99) hem eksik (116 → 154) artıyor.
+- Eğim 0'dan 40'a çıkınca neredeyse hiç değişmiyor. Kâğıt düz olduğu sürece
+  homografi perspektifi tamamen alıyor.
+- Işık düzeltmesi pencerede +0.16 (40 derece).
+- **Kırışık pencereyi ve odayı düşürüyor.** 10 izde pencere 0.668, oda
+  0.714, kenar 0.325. Kahin köşede de aynı (kayıp homografinin dışında
+  kalan yerel kayma ve iz çizgilerinden, köşe bulmadan değil).
+
+**Sınırlar:**
+
+- Sentetik. Parlama, odak bulanıklığı, lens bozulması, kâğıdın kıvrılması
+  (düz olmayan yüzey) ve açık renkli masa benzetilmedi.
+- Kırışık düz bir iz. Gerçek buruşturma daha düzensiz ve iz sayısı çok daha
+  fazla.
+- Ölçek: düzeltilmiş sayfa A4 300 dpi kabul ediliyor ve plan sayfaya
+  CVC-FP'deki gibi basılmış. Başka kâğıt boyutunda ya da çizim ölçeğinde
+  akışın piksel eşikleri tutmaz, ölçek kestirimi gerekir.
+- Sıradaki ölçüm gerçek fotoğraf: birkaç geliştirme planını basıp çekmek.
+  Cevabı taşımak için düzeltilmiş fotoğraf orijinal taramaya kayıtlanır
+  (özellik eşleme ve RANSAC homografisi, klasik).
